@@ -1,0 +1,55 @@
+PING exweb00.upm.edu.my (119.40.117.17): 472 data bytes
+480 bytes from 119.40.117.17: icmp_seq=0 ttl=51 time=101.613 ms
+480 bytes from 119.40.117.17: icmp_seq=1 ttl=51 time=101.520 ms
+480 bytes from 119.40.117.17: icmp_seq=2 ttl=51 time=101.530 ms
+480 bytes from 119.40.117.17: icmp_seq=3 ttl=51 time=102.212 ms
+480 bytes from 119.40.117.17: icmp_seq=4 ttl=51 time=101.580 ms
+480 bytes from 119.40.117.17: icmp_seq=5 ttl=51 time=102.497 ms
+480 bytes from 119.40.117.17: icmp_seq=6 ttl=51 time=101.908 ms
+480 bytes from 119.40.117.17: icmp_seq=7 ttl=51 time=102.283 ms
+480 bytes from 119.40.117.17: icmp_seq=8 ttl=51 time=102.080 ms
+480 bytes from 119.40.117.17: icmp_seq=9 ttl=51 time=101.938 ms
+480 bytes from 119.40.117.17: icmp_seq=10 ttl=51 time=102.044 ms
+480 bytes from 119.40.117.17: icmp_seq=11 ttl=51 time=102.137 ms
+480 bytes from 119.40.117.17: icmp_seq=12 ttl=51 time=101.553 ms
+480 bytes from 119.40.117.17: icmp_seq=13 ttl=51 time=102.165 ms
+480 bytes from 119.40.117.17: icmp_seq=14 ttl=51 time=101.405 ms
+480 bytes from 119.40.117.17: icmp_seq=15 ttl=51 time=101.992 ms
+480 bytes from 119.40.117.17: icmp_seq=16 ttl=51 time=102.782 ms
+480 bytes from 119.40.117.17: icmp_seq=17 ttl=51 time=102.512 ms
+480 bytes from 119.40.117.17: icmp_seq=18 ttl=51 time=102.513 ms
+480 bytes from 119.40.117.17: icmp_seq=19 ttl=51 time=102.001 ms
+480 bytes from 119.40.117.17: icmp_seq=20 ttl=51 time=102.850 ms
+480 bytes from 119.40.117.17: icmp_seq=21 ttl=51 time=102.088 ms
+480 bytes from 119.40.117.17: icmp_seq=22 ttl=51 time=102.175 ms
+480 bytes from 119.40.117.17: icmp_seq=23 ttl=51 time=102.021 ms
+480 bytes from 119.40.117.17: icmp_seq=24 ttl=51 time=106.532 ms
+480 bytes from 119.40.117.17: icmp_seq=25 ttl=51 time=102.043 ms
+480 bytes from 119.40.117.17: icmp_seq=26 ttl=51 time=102.403 ms
+480 bytes from 119.40.117.17: icmp_seq=27 ttl=51 time=102.824 ms
+480 bytes from 119.40.117.17: icmp_seq=28 ttl=51 time=102.333 ms
+480 bytes from 119.40.117.17: icmp_seq=29 ttl=51 time=102.309 ms
+480 bytes from 119.40.117.17: icmp_seq=30 ttl=51 time=108.473 ms
+480 bytes from 119.40.117.17: icmp_seq=31 ttl=51 time=102.198 ms
+480 bytes from 119.40.117.17: icmp_seq=32 ttl=51 time=102.180 ms
+480 bytes from 119.40.117.17: icmp_seq=33 ttl=51 time=102.195 ms
+480 bytes from 119.40.117.17: icmp_seq=34 ttl=51 time=102.667 ms
+480 bytes from 119.40.117.17: icmp_seq=35 ttl=51 time=137.483 ms
+480 bytes from 119.40.117.17: icmp_seq=36 ttl=51 time=102.386 ms
+480 bytes from 119.40.117.17: icmp_seq=37 ttl=51 time=101.409 ms
+480 bytes from 119.40.117.17: icmp_seq=38 ttl=51 time=104.922 ms
+480 bytes from 119.40.117.17: icmp_seq=39 ttl=51 time=102.357 ms
+480 bytes from 119.40.117.17: icmp_seq=40 ttl=51 time=102.083 ms
+480 bytes from 119.40.117.17: icmp_seq=41 ttl=51 time=102.294 ms
+480 bytes from 119.40.117.17: icmp_seq=42 ttl=51 time=102.678 ms
+480 bytes from 119.40.117.17: icmp_seq=43 ttl=51 time=102.119 ms
+480 bytes from 119.40.117.17: icmp_seq=44 ttl=51 time=102.146 ms
+480 bytes from 119.40.117.17: icmp_seq=45 ttl=51 time=101.999 ms
+480 bytes from 119.40.117.17: icmp_seq=46 ttl=51 time=102.101 ms
+480 bytes from 119.40.117.17: icmp_seq=47 ttl=51 time=102.136 ms
+480 bytes from 119.40.117.17: icmp_seq=48 ttl=51 time=102.121 ms
+480 bytes from 119.40.117.17: icmp_seq=49 ttl=51 time=102.421 ms
+
+--- exweb00.upm.edu.my ping statistics ---
+50 packets transmitted, 50 packets received, 0.0% packet loss
+round-trip min/avg/max/stddev = 101.405/103.124/137.483/5.047 ms
