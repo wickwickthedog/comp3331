@@ -1,0 +1,55 @@
+PING www.tu-berlin.de (130.149.7.201) 722(750) bytes of data.
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=1 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=2 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=3 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=4 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=5 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=6 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=7 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=8 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=9 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=10 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=11 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=12 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=13 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=14 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=15 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=16 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=17 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=18 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=19 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=20 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=21 ttl=240 time=283 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=22 ttl=240 time=283 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=23 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=24 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=25 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=26 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=27 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=28 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=29 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=30 ttl=240 time=283 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=31 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=32 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=33 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=34 ttl=240 time=285 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=35 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=36 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=37 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=38 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=39 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=40 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=41 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=42 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=43 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=44 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=45 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=46 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=47 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=48 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=49 ttl=240 time=284 ms
+730 bytes from www.tu-berlin.de (130.149.7.201): icmp_req=50 ttl=240 time=284 ms
+
+--- www.tu-berlin.de ping statistics ---
+50 packets transmitted, 50 received, 0% packet loss, time 49046ms
+rtt min/avg/max/mdev = 283.951/284.098/285.076/0.483 ms
