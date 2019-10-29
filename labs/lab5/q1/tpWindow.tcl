@@ -27,7 +27,7 @@ proc finish {} {
 	$ns flush-trace
 	close $file1
 	close $file2
-	exec nam out.nam &
+	# exec nam out.nam &
 	exit 0
 }
 
@@ -51,7 +51,7 @@ $fmon reset
 $ns attach-fmon $flink $fmon
 
 #Create a TCP agent and attach it to node n0
-set tcp0 [new Agent/TCP]
+set tcp0 [new Agent/TCP/Reno]
 $tcp0 set window_ $windowSize
 $tcp0 set fid_ 1
 $tcp0 set packetSize_ 500B
