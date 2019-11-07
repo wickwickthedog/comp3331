@@ -1,5 +1,6 @@
 #Create a simulator object
->>
+# >> ADDED
+set ns [new Simulator]
 
 #Define different colors
 $ns color 1 Blue
