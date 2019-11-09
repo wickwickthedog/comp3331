@@ -13,7 +13,7 @@ set file2 [open out.nam w]
 $ns namtrace-all $file2
 
 
-#$ns rtproto DV
+$ns rtproto DV
 
 #Define a 'finish' procedure
 proc finish {} {
@@ -26,7 +26,7 @@ proc finish {} {
 }
 
 
-#Node set multiPath_ 1 
+Node set multiPath_ 1 
 
 #Create six nodes
 set n0 [$ns node]
@@ -84,10 +84,10 @@ $ns connect $udp1 $null0
 $ns rtmodel-at 1.0 down $n1 $n4
 $ns rtmodel-at 1.2 up $n1 $n4
 
-#$ns cost $n1 $n4 3
+$ns cost $n1 $n4 3
 
-#$ns cost $n1 $n4 2
-#$ns cost $n3 $n5 3
+$ns cost $n1 $n4 2
+$ns cost $n3 $n5 3
 
 #Schedule events for the CBR agent
 $ns at 0.5 "$cbr0 start"
