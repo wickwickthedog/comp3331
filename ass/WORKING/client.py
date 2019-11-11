@@ -15,6 +15,9 @@ import sys
 server_name = 'localhost'
 server_port = 12000
 
+# timeout = -1
+# block_duration = -1
+
 # FIXME
 # for easy testing comment this
 # server_name = sys.argv[1]
@@ -74,6 +77,17 @@ while (1):
             # print(user_header+username)
             # print(credentials.decode())
             client_socket.send(user_header + credentials)
+        # elif 'Timeout' in message:
+        #     timeout = int(message.split(',')[1])
+        #     # print(timeout)
+        #     block_duration = int(message.split(',')[3])
+        #     # print(block_duration)
+        #     # client_socket.settimeout(timeout)
+        #     break
+        # elif 'Block' in message:
+        #     block_duration = int(message.split(',')[1])
+        #     print(block_duration)
+
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
         # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
@@ -87,12 +101,14 @@ while (1):
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: '.format(str(e)))
+        print('Reading error: Authentication'.format(str(e)))
         sys.exit(0)
 # --- Authentication END ---
 
 while (1):
-   
+
+  
+    # print(client_socket.gettimeout())
     # Wait for user to input a message
     message = input(f'{username.decode()} > ')
 
@@ -104,6 +120,7 @@ while (1):
         message_header = f"{len(message):<{20}}".encode()
         client_socket.send(message_header + message)
 
+        # client_socket.settimeout(timeout)
     try:
         # Now we want to loop over received messages (there might be more than one) and print them
         while True:
@@ -135,10 +152,12 @@ while (1):
         # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
         # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
         # If we got different error code - something happened
+        # if str(e) == "timed out":
+        #     client_socket.close()
+        #     sys.exit(0)
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
             sys.exit(0)
-
         # We just did not receive anything
         continue
 

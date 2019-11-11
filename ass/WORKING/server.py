@@ -11,10 +11,13 @@ from socket import *
 from select import *
 from utility import authenticate
 import sys
+import datetime 
 
 # for easy testing uncomment this
 server_host = 'localhost'
 server_port = 12000
+block_duration = 60
+timeout = 8
 
 # FIXME
 # for easy testing comment this
@@ -83,9 +86,16 @@ while (1):
     # This is a blocking call, code execution will "wait" here and "get" notified in case any action should be taken
     read_sockets, _, exception_sockets = select(sockets_list, [], sockets_list)
 
+    # if not (read_sockets or exception_sockets):
+    #     current_time = datetime.datetime.now()
+
+    #     print("timeout: " + current_time.strftime("%H:%M:%S") + f' {read_sockets}')
 
     # Iterate over notified sockets
     for notified_socket in read_sockets:
+        # user = clients[notified_socket]
+        # if clients != None:
+            # print(clients[notified_socket])
 
         # If notified socket is a server socket - new connection, accept it
         if notified_socket == server_socket:
@@ -112,7 +122,8 @@ while (1):
                 if 'Successful' in result:
                     # Add accepted socket to select() list
                     sockets_list.append(client_socket)
-
+                    # for timeout
+                    user['last-active'] = datetime.datetime.now()
                     # user will have user_header and credentials
                     clients[client_socket] = user
 
@@ -122,17 +133,39 @@ while (1):
                     message = f'Welcome back {username}!'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
+                    # message = f'Timeout if inactive,{timeout},Block Duration,{block_duration}'.encode()
+                    # message_header = f"{len(message):<{20}}".encode()
+                    # client_socket.send(message_header + message)
                     break;
                 else:
                     message = result.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
+                    # message = f'Block Duration,{block_duration}'.encode()
+                    # message_header = f"{len(message):<{20}}".encode()
+                    # client_socket.send(message_header + message)
 
         # Else existing socket is sending a message
         else:
-
             # Receive message
             message = receive_message(notified_socket)
+
+            current_time = datetime.datetime.now()
+            print('{} - {}'.format(current_time, clients[notified_socket]['last-active']))
+            minus_timeout = current_time - datetime.timedelta(seconds=timeout)
+            if minus_timeout == clients[notified_socket]['last-active'] or minus_timeout > clients[notified_socket]['last-active']:
+                print('Connection timeout for: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
+
+                # Remove from list for socket.socket()
+                sockets_list.remove(notified_socket)
+
+                # Remove from our list of users
+                del clients[notified_socket]
+
+                # send indication of termination to client
+                notified_socket.shutdown(SHUT_RDWR)
+
+                continue
 
             # If False, client disconnected, cleanup
             if message is False:
@@ -149,7 +182,9 @@ while (1):
             # Get user by notified socket, so we will know who sent the message
             user = clients[notified_socket]
 
-            print('Received message from {}: {}'.format(user["data"].decode().split(',')[0], message["data"].decode()))
+            user['last-active'] = datetime.datetime.now()
+
+            print('Received message at {} from {}: {}'.format(user['last-active'], user["data"].decode().split(',')[0], message["data"].decode()))
 
             # Iterate over connected clients and broadcast message
             # for client_socket in clients:
@@ -160,6 +195,10 @@ while (1):
                     # Send user and message (both with their headers)
                     # We are reusing here message header sent by sender, and saved username header send by user when he connected
                     # client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+        # user = clients[notified_socket]
+        # print('{}\'s last active: {}'.format(user['data'].decode().split(',')[0], user['last-active']))
+        # notified_socket.settimeout(timeout)
+        # print(notified_socket.gettimeout())
 
     # It's not really necessary to have this, but will handle some socket exceptions just in case
     for notified_socket in exception_sockets:

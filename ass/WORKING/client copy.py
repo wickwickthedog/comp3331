@@ -15,6 +15,9 @@ import sys
 server_name = 'localhost'
 server_port = 12000
 
+# timeout = -1
+# block_duration = -1
+
 # FIXME
 # for easy testing comment this
 # server_name = sys.argv[1]
@@ -31,16 +34,81 @@ client_socket.connect((server_name, server_port))
 # Set connection to non-blocking state, so .recv() call won;t block, just return some exception we'll handle
 client_socket.setblocking(False)
 
-# Prepare username and header and send them
-# We need to encode username to bytes, then count number of bytes and prepare header of fixed size, that we encode to bytes as well
-username = input("Username: ")
+# --- Authentication START ---
+username = input("Username: ").strip() # .replace(" ", "")
+password = input("Password: ").strip() # .replace(" ", "")
+credentials = username + ',' + password
+print("You Entered >> user: " + username + ' and pwd: ' + password)
 username = username.encode()
-user_header = f"{len(username):<{20}}".encode()
+credentials = credentials.encode()
+user_header = f"{len(credentials):<{20}}".encode()
 # print(user_header+username)
-client_socket.send(user_header + username)
+# print(credentials.decode())
+client_socket.send(user_header + credentials)
 
-while True:
-    print(f'{username.decode()}\'s console')
+while (1):    
+    try:
+        message_header = client_socket.recv(20)
+        message_length = int(message_header.decode())
+        message = client_socket.recv(message_length).decode()
+        print(message)
+        if 'Welcome' in message:
+            print(f'----- {username.decode()}\'s console -----')
+            break
+        elif 'Password' in message:
+            username = username.decode()
+            password = input("Password: ").strip() # .replace(" ", "")
+            credentials = username + ',' + password
+            print("You Entered >> user: " + username + ' and pwd: ' + password)
+            credentials = credentials.encode()
+            user_header = f"{len(credentials):<{20}}".encode()
+            # print(user_header+username)
+            # print(credentials.decode())
+            username = username.encode()
+            client_socket.send(user_header + credentials)
+        elif 'Username' in message:
+            username = input("Username: ").strip() # .replace(" ", "")
+            password = input("Password: ").strip() # .replace(" ", "")
+            credentials = username + ',' + password
+            print("You Entered >> user: " + username + ' and pwd: ' + password)
+            username = username.encode()
+            credentials = credentials.encode()
+            user_header = f"{len(credentials):<{20}}".encode()
+            # print(user_header+username)
+            # print(credentials.decode())
+            client_socket.send(user_header + credentials)
+        # elif 'Timeout' in message:
+        #     timeout = int(message.split(',')[1])
+        #     # print(timeout)
+        #     block_duration = int(message.split(',')[3])
+        #     # print(block_duration)
+        #     # client_socket.settimeout(timeout)
+        #     break
+        # elif 'Block' in message:
+        #     block_duration = int(message.split(',')[1])
+        #     print(block_duration)
+
+    except IOError as e:
+        # This is normal on non blocking connections - when there are no incoming data error is going to be raised
+        # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
+        # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
+        # If we got different error code - something happened
+        if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
+            print('Reading error: {}'.format(str(e)))
+            sys.exit(0)
+            # We just did not receive anything
+            # continue
+
+    except Exception as e:
+        # Any other exception - something happened, exit
+        print('Reading error: Authentication'.format(str(e)))
+        sys.exit(0)
+# --- Authentication END ---
+
+while (1):
+
+  
+    # print(client_socket.gettimeout())
     # Wait for user to input a message
     message = input(f'{username.decode()} > ')
 
@@ -52,6 +120,7 @@ while True:
         message_header = f"{len(message):<{20}}".encode()
         client_socket.send(message_header + message)
 
+        # client_socket.settimeout(timeout)
     try:
         # Now we want to loop over received messages (there might be more than one) and print them
         while True:
@@ -65,10 +134,10 @@ while True:
                 sys.exit()
 
             # Convert header to int value
-            username_length = int(user_header.decode())
+            user_length = int(user_header.decode())
 
             # Receive and decode username
-            username = client_socket.recv(username_length).decode()
+            user = client_socket.recv(user_length).decode().split(',')[0]
 
             # Now do the same for message (as we received username, we received whole message, there's no need to check if it has any length)
             message_header = client_socket.recv(20)
@@ -76,21 +145,23 @@ while True:
             message = client_socket.recv(message_length).decode()
 
             # Print message
-            print(f'{username} > {message}')
+            print(f'{user} > {message}')
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
         # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
         # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
         # If we got different error code - something happened
+        # if str(e) == "timed out":
+        #     client_socket.close()
+        #     sys.exit(0)
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
-            sys.exit()
-
+            sys.exit(0)
         # We just did not receive anything
         continue
 
     except Exception as e:
         # Any other exception - something happened, exit
         print('Reading error: '.format(str(e)))
-        sys.exit()
+        sys.exit(0)
