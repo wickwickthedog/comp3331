@@ -58,8 +58,8 @@ while (1):
             break
         elif ('blocked' in message and username.decode() in message)or 'timeout' in message:
             # client_socket.setblocking(True)
-            client_socket.shutdown(SHUT_RDWR)
-            client_socket.close()
+            # client_socket.shutdown(SHUT_RDWR)
+            # client_socket.close()
             sys.exit(1)
         elif 'Password' in message:
             username = username.decode()
