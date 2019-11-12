@@ -9,7 +9,7 @@ Usage:
 '''
 from socket import *
 from select import *
-from utility import authenticate
+from utility import authenticate, user_exists
 import sys
 import datetime 
 
@@ -17,10 +17,11 @@ import datetime
 server_host = 'localhost'
 server_port = 12000
 block_duration = 60
-timeout = 1200
+timeout = 120
 
 # FIXME
 # for easy testing comment this
+# server_host = 'localhost'
 # server_port = int(sys.argv[1])
 # block_duration = int(sys.argv[2])
 # timeout = int(sys.argv[3])
@@ -53,6 +54,9 @@ blocked_clients = {}
 
 # list of logged out clients
 logged_out_clients = {}
+
+# list of offline messages
+offline_messages = {}
 
 print(f'Listening for connections on {server_host}:{server_port}')
 
@@ -105,7 +109,7 @@ while (1):
                 # client_socket.send(message_header + message)
 
                 # add to logged out list
-                logged_out_clients[notified_socket] = clients[notified_socket]
+                logged_out_clients[timeout_socket] = clients[timeout_socket]
 
                 # Remove from list for socket.socket()
                 sockets_list.remove(timeout_socket)
@@ -189,16 +193,21 @@ while (1):
                     break
                 # --- block_duration end ---
 
+                # FIXME --- Check duplicate login---
+                # exist = False
+                # dup = None
+                # for exist_socket in clients:
+                #     if credentials[0] in clients[exist_socket]['data'].decode():
+                #         exist = True
+                #         dup = exist_socket
+                #         break
+
                 # --- Authentication start ---
+                # if exist == False:
                 result = authenticate(credentials)
 
                 print(f'AUTHENTICATION for {credentials[0]}: {result}')
                 if 'Successful' in result:
-                    # remove from logged out list
-                    for logged_out_socket in logged_out_clients:
-                        if logged_out_clients[logged_out_socket]['data'].decode().split(',')[0] == credentials[0]:
-                            del logged_out_clients[logged_out_socket]
-                            break
 
                     # Add accepted socket to select() list
                     sockets_list.append(client_socket)
@@ -212,7 +221,7 @@ while (1):
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, username))
                     # client_socket.send(f'Welcome {username}'.encode())
 
-                    message = '--------------------'.encode()
+                    message = '--------------------------'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
@@ -232,13 +241,58 @@ while (1):
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
-                    message = '--------------------'.encode()
+                    message = 'message <user> <messages>'.encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+
+                    message = '--------------------------'.encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+
+                    message = '---- offline messages ----'.encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+
+                    # print(client_socket)
+
+                    # for client_socket in logged_out_clients:
+                    #     if logged_out_clients[client_socket]['data'].decode().split(',')[0] == credentials[0]:
+                    #         # print(offline_messages[client_socket]['recipient'].decode())
+                    #         if credentials[0] == logged_out_clients[client_socket]['recipient'].decode():
+                                # for msg in offline_messages:
+                                #     if credentials[0] == offline_messages[client_socket]['recipient'].decode():
+                                #         message = '{} > {}'.format(offline_messages[client_socket]['sender'].decode().split(',')[0], offline_messages[client_socket]['message'].decode()).encode()
+                                #         message_header = f"{len(message):<{20}}".encode()
+                                #         client_socket.send(message_header + message)
+                    #             del offline_messages[client_socket]
+                    #             break
+                    # else:
+                    #     message = '          None            '.encode()
+                    #     message_header = f"{len(message):<{20}}".encode()
+                    #     client_socket.send(message_header + message)
+
+                    # update logged out clients list and send offline message(s)
+                    for logged_out_socket in logged_out_clients:
+                        if logged_out_clients[logged_out_socket]['data'].decode().split(',')[0] == credentials[0]:
+                            if logged_out_socket in offline_messages:
+                                for msg in offline_messages[logged_out_socket]:
+                                    # print(offline_messages[msg])
+                                    if credentials[0] == msg['recipient'].decode().split(',')[0]:
+                                        message = '{} > {}'.format(msg['sender'].decode().split(',')[0], msg['message'].decode()).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        client_socket.send(message_header + message)
+                                del offline_messages[logged_out_socket]
+                            del logged_out_clients[logged_out_socket]
+                            break
+
+                    message = '------------------------'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
                     message = f'Welcome back {username}!'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
+
                     break
                 else:
                     if 'Password' in result:
@@ -270,6 +324,12 @@ while (1):
                         message = result.encode()
                         message_header = f"{len(message):<{20}}".encode()
                         client_socket.send(message_header + message)
+                # else:
+                #     message = f'blocked, {credentials[0]} already logged in!'.encode()
+                #     message_header = f"{len(message):<{20}}".encode()
+                #     client_socket.send(message_header + message)
+                    # dup.send(message_header + message)
+                    # client_socket.shutdown(SHUT_RDWR)
                 # --- Authentication end ---
 
         # Else existing socket is sending a message
@@ -283,7 +343,7 @@ while (1):
             if message is False:
                 print('Closed connection from: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
 
-                # FIXME add to logged out list
+                # add to logged out list
                 if notified_socket not in logged_out_clients:
                     logged_out_clients[notified_socket] = clients[notified_socket]
 
@@ -298,11 +358,14 @@ while (1):
             # Get user by notified socket, so we will know who sent the message
             user = clients[notified_socket]
 
+            if user is False:
+                continue
+
             user['last-active'] = datetime.datetime.now()
 
             print('Received message at {} from {}: {}'.format(user['last-active'], user["data"].decode().split(',')[0], message["data"].decode()))
 
-            #TODO commands
+            # --- TODO Commands start ---
             command = message["data"].decode().split(' ')[0]
             if command == 'broadcast':
                 try:
@@ -315,7 +378,7 @@ while (1):
 
                             # Send user and message (both with their headers)
                             # We are reusing here message header sent by sender, and saved username header send by user when he connected
-                            client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+                            client_socket.send(clients[client_socket]['header'] + clients[client_socket]['data'] + message['header'] + message['data'])
                 except:
                     print('FAIL: No message to broadcast, {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
                     message = 'No message to broadcast, {}'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
@@ -344,7 +407,7 @@ while (1):
                         if client_socket != notified_socket and client_socket not in blocked_clients and client_socket not in logged_out_clients:
                             # print("Last active" + clients[client_socket]['last-active'].strftime("%H:%M:%S"))
                             # print("current time is " + current_time.strftime("%H:%M:%S"))
-                            if t > current_time or t == current_time:
+                            if t > current_time:
                                 msg = '{} IS online, last active: {}!'.format(clients[client_socket]['data'].decode().split(',')[0], clients[client_socket]['last-active'].strftime("%H:%M:%S")).encode()
                                 message_header = f"{len(msg):<{20}}".encode()
                                 notified_socket.send(user['header'] + user['data'] + message_header + msg)
@@ -370,14 +433,48 @@ while (1):
                     message = 'No time specified, {}'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
-                
+            elif command == 'message':
+                check = message['data'].decode().split(' ')
+                if len(check) < 3:
+                    print('FAIL: Insufficient Args, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]))
+                    message = 'Error, Insufficient Args, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+                else:
+                    recipient = message['data'].decode().split(' ')[1]
+                    msg = message['data'].decode().split(' ', 2)[2]
 
+                    if user_exists(recipient, clients, logged_out_clients):
+                        for client_socket in clients:
+                            if client_socket != notified_socket and clients[client_socket]['data'].decode().split(',')[0] == recipient:
+                                msg = msg.strip().encode()
+                                message_header = f"{len(msg):<{20}}".encode()
+                                client_socket.send(user['header'] + user['data'] + message_header + msg)
+                        for client_socket in logged_out_clients:
+                            if client_socket != notified_socket and logged_out_clients[client_socket]['data'].decode().split(',')[0] == recipient:
+                                msg = msg.strip().encode()
+                                # message_header = f"{len(msg):<{20}}".encode()
+                                # client_socket.send(user['header'] + user['data'] + message_header + msg)
+                                if client_socket in offline_messages:
+                                    offline_messages[client_socket].append({'sender_header': user['header'], 'sender': user['data'], 'recipient': logged_out_clients[client_socket]['data'], 'message':msg })
+                                else:
+                                    offline_messages[client_socket] = [{'sender_header': user['header'], 'sender': user['data'], 'recipient': logged_out_clients[client_socket]['data'], 'message':msg }]
+                                # print(client_socket)
+                                # print(offline_messages[client_socket])
+
+                    else:
+                        print('FAIL: Invalid User: {}!'.format(recipient))
+                        message = 'Error, Invalid User: {}!'.format(recipient).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        # notified_socket.close()
             else:
-                print('FAIL: Invalid Command, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]))
-                message = 'Error, Invalid Command, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+                print('FAIL: Invalid Command, {}!'.format(user['data'].decode().split(',')[0]))
+                message = 'Error, Invalid Command, {}!'.format(user['data'].decode().split(',')[0]).encode()
                 message_header = f"{len(message):<{20}}".encode()
                 notified_socket.send(user['header'] + user['data'] + message_header + message)
-    
+            # --- Commands end ---
+
     # It's not really necessary to have this, but will handle some socket exceptions just in case
     for notified_socket in exception_sockets:
 

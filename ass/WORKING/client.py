@@ -45,15 +45,21 @@ client_socket.send(user_header + credentials)
 
 while (1):    
     try:
-        message_header = client_socket.recv(20)
-        message_length = int(message_header.decode())
-        message = client_socket.recv(message_length).decode()
+        user_header = client_socket.recv(20)
+         # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
+        # if not len(user_header):
+        #     print('Connection closed by the server')
+        #     sys.exit(0)
+        user_length = int(user_header.decode())
+        message = client_socket.recv(user_length).decode()
         print(message)
         if 'Welcome' in message:
             print(f'----- {username.decode()}\'s console -----')
             break
         elif ('blocked' in message and username.decode() in message)or 'timeout' in message:
-            client_socket.setblocking(True)
+            # client_socket.setblocking(True)
+            client_socket.shutdown(SHUT_RDWR)
+            client_socket.close()
             sys.exit(1)
         elif 'Password' in message:
             username = username.decode()
@@ -111,7 +117,7 @@ while (1):
         # Now we want to loop over received messages (there might be more than one) and print them
         while (1):
 
-            # Receive our "header" containing username length, it's size is defined and constant
+            # Receive our "header" containing user length, it's size is defined and constant
             user_header = client_socket.recv(20)
 
             # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
@@ -122,7 +128,7 @@ while (1):
             # Convert header to int value
             user_length = int(user_header.decode())
 
-            # Receive and decode username
+            # Receive and decode message
             user = client_socket.recv(user_length).decode().split(',')[0]
 
             # Now do the same for message (as we received username, we received whole message, there's no need to check if it has any length)
@@ -146,5 +152,5 @@ while (1):
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: '.format(str(e)))
+        print('Reading error: Message'.format(str(e)))
         sys.exit(0)

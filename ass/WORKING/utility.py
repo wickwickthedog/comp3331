@@ -19,3 +19,12 @@ def authenticate(creds):
             line = reader.readline()
         # return "Invalid Password"
         return 'Invalid Username. Please try again!'
+
+def user_exists(username, clients, logged_out_clients):
+    for sockets in clients:
+        if username in clients[sockets]['data'].decode():
+            return True
+    for sockets in logged_out_clients:
+        if username in logged_out_clients[sockets]['data'].decode():
+            return True
+    return False
