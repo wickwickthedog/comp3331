@@ -16,7 +16,7 @@ import datetime
 # for easy testing uncomment this
 server_host = 'localhost'
 server_port = 12000
-block_duration = 20
+block_duration = 60
 timeout = 120
 
 # FIXME
@@ -89,8 +89,47 @@ while (1):
     # This is a blocking call, code execution will "wait" here and "get" notified in case any action should be taken
     read_sockets, _, exception_sockets = select(sockets_list, [], sockets_list)
 
+    # --- timeout start ---
+    for timeout_socket in list(clients):
+        current_time = datetime.datetime.now()
+        if 'last-active' in clients[timeout_socket]:
+            print('{} - {}'.format(current_time, clients[timeout_socket]['last-active']))
+            minus_timeout = current_time - datetime.timedelta(seconds=timeout)
+            if minus_timeout == clients[timeout_socket]['last-active'] or minus_timeout > clients[timeout_socket]['last-active']:
+                print('Connection timeout for: {}'.format(clients[timeout_socket]['data'].decode().split(',')[0]))
+                # message = '{} timeout due to inactivity...'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+                # message_header = f"{len(message):<{20}}".encode()
+                # client_socket.send(message_header + message)
+                # Remove from list for socket.socket()
+                sockets_list.remove(timeout_socket)
+                # Remove from our list of users
+                del clients[timeout_socket]
+                # send indication of termination to client
+                timeout_socket.shutdown(SHUT_RDWR)
+                timeout_socket.close()
+    # --- timeout end ---
+
     # Iterate over notified sockets
     for notified_socket in read_sockets:
+
+        # current_time = datetime.datetime.now()
+        # if 'last-active' in clients[notified_socket]:
+        #     print('{} - {}'.format(current_time, clients[notified_socket]['last-active']))
+        #     minus_timeout = current_time - datetime.timedelta(seconds=timeout)
+        #     if minus_timeout == clients[notified_socket]['last-active'] or minus_timeout > clients[notified_socket]['last-active']:
+        #         print('Connection timeout for: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
+        #         # message = '{} timeout due to inactivity...'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+        #         # message_header = f"{len(message):<{20}}".encode()
+        #         # client_socket.send(message_header + message)
+        #         # Remove from list for socket.socket()
+        #         sockets_list.remove(notified_socket)
+        #         # Remove from our list of users
+        #         del clients[notified_socket]
+        #         # send indication of termination to client
+        #         notified_socket.shutdown(SHUT_RDWR)
+        #         notified_socket.close()
+        #         continue
+
         # If notified socket is a server socket - new connection, accept it
         if notified_socket == server_socket and notified_socket not in clients:
 
@@ -132,7 +171,7 @@ while (1):
                         if minus_blocked > blocked_clients[notified_socket]['account-blocked']:
                             print(f'{username}\'s account has been UNBLOCKED!')
                             if username == credentials[0]:
-                                message = f'Your account have been UNBLOCKED, Welcome back {username}!'.encode()
+                                message = f'Your account have been UNBLOCKED, {username}!'.encode()
                                 message_header = f"{len(message):<{20}}".encode()
                                 client_socket.send(message_header + message)
                                 sockets_list.remove(notified_socket)
@@ -161,12 +200,8 @@ while (1):
 
                 # --- Authentication start ---
                 result = authenticate(credentials)
-                    # elif counter == 1:
-                    #     message = f'{username} is still BLOCKED!'.encode()
-                    #     message_header = f"{len(message):<{20}}".encode()
-                    #     client_socket.send(message_header + message)
 
-                print(f'AUNTHENTICATION for {credentials[0]}: {result}')
+                print(f'AUTHENTICATION for {credentials[0]}: {result}')
                 if 'Successful' in result:
                     # Add accepted socket to select() list
                     sockets_list.append(client_socket)
@@ -220,28 +255,9 @@ while (1):
         # Else existing socket is sending a message
         elif notified_socket in clients and notified_socket not in blocked_clients:
         # else:
+            
             # Receive message
             message = receive_message(notified_socket)
-
-            # --- timeout start ---
-            current_time = datetime.datetime.now()
-            if 'last-active' in clients[notified_socket]:
-                print('{} - {}'.format(current_time, clients[notified_socket]['last-active']))
-                minus_timeout = current_time - datetime.timedelta(seconds=timeout)
-                if minus_timeout == clients[notified_socket]['last-active'] or minus_timeout > clients[notified_socket]['last-active']:
-                    print('Connection timeout for: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
-                    # message = '{} timeout due to inactivity...'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
-                    # message_header = f"{len(message):<{20}}".encode()
-                    # client_socket.send(message_header + message)
-                    # Remove from list for socket.socket()
-                    sockets_list.remove(notified_socket)
-                    # Remove from our list of users
-                    del clients[notified_socket]
-                    # send indication of termination to client
-                    notified_socket.shutdown(SHUT_RDWR)
-                    notified_socket.close()
-                    continue
-            # --- timeout end ---
 
             # If False, client disconnected, cleanup
             if message is False:
@@ -262,16 +278,37 @@ while (1):
 
             print('Received message at {} from {}: {}'.format(user['last-active'], user["data"].decode().split(',')[0], message["data"].decode()))
 
-            # Iterate over connected clients and broadcast message
-            # for client_socket in clients:
+            #TODO commands
+            command = message["data"].decode().split(' ')[0]
+            if command == 'broadcast':
+                try:
+                    message['data'] = message['data'].decode().split(' ', 1)[1].encode()
+                    # Iterate over connected clients and broadcast message
+                    for client_socket in clients:
 
-                # But don't sent it to sender
-                # if client_socket != notified_socket:
+                        # But don't sent it to sender
+                        if client_socket != notified_socket:
 
-                    # Send user and message (both with their headers)
-                    # We are reusing here message header sent by sender, and saved username header send by user when he connected
-                    # client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
-
+                            # Send user and message (both with their headers)
+                            # We are reusing here message header sent by sender, and saved username header send by user when he connected
+                            client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
+                except:
+                    print('FAIL: No message to broadcast, {}'.format(clients[client_socket]['data'].decode().split(',')[0]))
+                    message = 'No message to broadcast, {}'.format(clients[client_socket]['data'].decode().split(',')[0]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(user['header'] + user['data'] + message_header + message)
+            elif command == 'whoelse':
+                for client_socket in clients:
+                    if client_socket != notified_socket and client_socket not in blocked_clients:
+                        message = '{} is online!'.format(clients[client_socket]['data'].decode().split(',')[0]).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+            else:
+                print('FAIL: Invalid Command, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]))
+                message = 'Error, Invalid Command, {}!'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                notified_socket.send(user['header'] + user['data'] + message_header + message)
+    
     # It's not really necessary to have this, but will handle some socket exceptions just in case
     for notified_socket in exception_sockets:
 

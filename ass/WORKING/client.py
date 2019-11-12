@@ -15,9 +15,6 @@ import sys
 server_name = 'localhost'
 server_port = 12000
 
-# timeout = -1
-# block_duration = -1
-
 # FIXME
 # for easy testing comment this
 # server_name = sys.argv[1]
@@ -80,16 +77,6 @@ while (1):
             # print(user_header+username)
             # print(credentials.decode())
             client_socket.send(user_header + credentials)
-        # elif 'Timeout' in message:
-        #     timeout = int(message.split(',')[1])
-        #     # print(timeout)
-        #     block_duration = int(message.split(',')[3])
-        #     # print(block_duration)
-        #     # client_socket.settimeout(timeout)
-        #     break
-        # elif 'Block' in message:
-        #     block_duration = int(message.split(',')[1])
-        #     print(block_duration)
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
@@ -110,23 +97,19 @@ while (1):
 
 while (1):
 
-  
-    # print(client_socket.gettimeout())
     # Wait for user to input a message
-    message = input(f'{username.decode()} > ')
+    message = input(f'{username.decode()} > ').strip()
 
     # If message is not empty - send it
     if message:
-
         # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
         message = message.encode()
         message_header = f"{len(message):<{20}}".encode()
         client_socket.send(message_header + message)
 
-        # client_socket.settimeout(timeout)
     try:
         # Now we want to loop over received messages (there might be more than one) and print them
-        while True:
+        while (1):
 
             # Receive our "header" containing username length, it's size is defined and constant
             user_header = client_socket.recv(20)

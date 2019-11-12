@@ -13,7 +13,7 @@ def authenticate(creds):
             # print(check[1]) # password
             if creds == check:
                 # login
-                return f'{check[0]} --> Login Successful'
+                return 'Login Successful'
             if creds[0] == check[0] and creds[1] != check[0]:
                 return 'Invalid Password. Please try again!'
             line = reader.readline()
