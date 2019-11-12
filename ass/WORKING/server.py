@@ -16,8 +16,8 @@ import datetime
 # for easy testing uncomment this
 server_host = 'localhost'
 server_port = 12000
-block_duration = 60
-timeout = 8
+block_duration = 20
+timeout = 120
 
 # FIXME
 # for easy testing comment this
@@ -47,6 +47,9 @@ sockets_list = [server_socket]
 
 # List of connected clients - socket as a key, user header and credentials as data
 clients = {}
+
+# list of blocked clients
+blocked_clients = {}
 
 print(f'Listening for connections on {server_host}:{server_port}')
 
@@ -86,25 +89,18 @@ while (1):
     # This is a blocking call, code execution will "wait" here and "get" notified in case any action should be taken
     read_sockets, _, exception_sockets = select(sockets_list, [], sockets_list)
 
-    # if not (read_sockets or exception_sockets):
-    #     current_time = datetime.datetime.now()
-
-    #     print("timeout: " + current_time.strftime("%H:%M:%S") + f' {read_sockets}')
-
     # Iterate over notified sockets
     for notified_socket in read_sockets:
-        # user = clients[notified_socket]
-        # if clients != None:
-            # print(clients[notified_socket])
-
         # If notified socket is a server socket - new connection, accept it
-        if notified_socket == server_socket:
+        if notified_socket == server_socket and notified_socket not in clients:
 
             # Accept new connection
             client_socket, client_address = server_socket.accept()
+            
+            # to track retry count
+            retry_count = 0
 
-            # DONE - LOGIN
-            # Client send credentials
+            # Client send message
             while(1):
                 user = receive_message(client_socket)
                 # print("HI")
@@ -115,14 +111,67 @@ while (1):
                 # print(user['data'].decode()) # username,password
                 credentials = user['data'].decode().split(',')
                 # print(credentials[0]) # username
-                # print(credentials[1]) # password    
+                # print(credentials[1]) # password   
 
+                # check blocked account
+                # --- block_duration start ---
+                check = None
+                for notified_socket in blocked_clients:
+                    # print("TRUE")
+                    # print(blocked_clients[notified_socket]['data'].decode())
+                    # print(credentials[0])
+                    # print(blocked_clients[notified_socket]['data'].decode())
+                    if blocked_clients[notified_socket]['data'].decode() == clients[notified_socket]['data'].decode(): #'account-blocked' in blocked_clients[notified_socket]: # or clients[notified_socket]['data'].decode() == credentials[0]: 
+                        # print(type(clients[notified_socket]))
+                        # print("BLOCKED " + blocked_clients[notified_socket]['data'].decode())
+                        # print("CLIENT " + clients[notified_socket]['data'].decode())
+                        username = blocked_clients[notified_socket]['data'].decode() #.split(',')[0]
+                        current_time = datetime.datetime.now()
+                        minus_blocked = current_time - datetime.timedelta(seconds=block_duration)
+                        # print('{} vs {}'.format(minus_blocked, clients[client_socket]['account-blocked']))
+                        if minus_blocked > blocked_clients[notified_socket]['account-blocked']:
+                            print(f'{username}\'s account has been UNBLOCKED!')
+                            if username == credentials[0]:
+                                message = f'Your account have been UNBLOCKED, Welcome back {username}!'.encode()
+                                message_header = f"{len(message):<{20}}".encode()
+                                client_socket.send(message_header + message)
+                                sockets_list.remove(notified_socket)
+                                del blocked_clients[notified_socket]
+                                del clients[notified_socket]
+                                check = 'unblocked'
+                            break
+                        # else:
+                        elif minus_blocked < blocked_clients[notified_socket]['account-blocked'] or minus_blocked == blocked_clients[notified_socket]['account-blocked']:
+                            print(f'{username} is still BLOCKED!')
+                            check = username
+                            # counter = 1
+                            if username == credentials[0]:
+                                message = 'Your account is blocked {}. Please try again after {}!'.format(username, (blocked_clients[notified_socket]['account-blocked'] + datetime.timedelta(seconds=block_duration)).strftime("%d/%m/%Y, %H:%M:%S")).encode()
+                                message_header = f"{len(message):<{20}}".encode()
+                                client_socket.send(message_header + message)
+                            break
+                    continue
+
+                if check == credentials[0]:
+                    message = f'Your account is blocked {credentials[0]}!'.encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+                    break
+                # --- block_duration end ---
+
+                # --- Authentication start ---
                 result = authenticate(credentials)
-                print("AUNTHENTICATION: " + result)
+                    # elif counter == 1:
+                    #     message = f'{username} is still BLOCKED!'.encode()
+                    #     message_header = f"{len(message):<{20}}".encode()
+                    #     client_socket.send(message_header + message)
+
+                print(f'AUNTHENTICATION for {credentials[0]}: {result}')
                 if 'Successful' in result:
                     # Add accepted socket to select() list
                     sockets_list.append(client_socket)
-                    # for timeout
+
+                    # to check user inactivity - timeout
                     user['last-active'] = datetime.datetime.now()
                     # user will have user_header and credentials
                     clients[client_socket] = user
@@ -130,42 +179,69 @@ while (1):
                     username = user['data'].decode().split(',')[0]
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, username))
                     # client_socket.send(f'Welcome {username}'.encode())
+
+
                     message = f'Welcome back {username}!'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
-                    # message = f'Timeout if inactive,{timeout},Block Duration,{block_duration}'.encode()
-                    # message_header = f"{len(message):<{20}}".encode()
-                    # client_socket.send(message_header + message)
-                    break;
+                    break
                 else:
-                    message = result.encode()
-                    message_header = f"{len(message):<{20}}".encode()
-                    client_socket.send(message_header + message)
-                    # message = f'Block Duration,{block_duration}'.encode()
-                    # message_header = f"{len(message):<{20}}".encode()
-                    # client_socket.send(message_header + message)
+                    if 'Password' in result:
+                        retry_count += 1
+                        user['retry'] = retry_count
+                        # print(user['retry'])
+                        if user['retry'] >= 3:
+                            print(f'{credentials[0]}\'s account is BLOCKED')
+                            user['account-blocked'] = datetime.datetime.now()
+                            message = 'Invalid Password. Please try again later after {}. {}, Your account has been blocked!'.format((user['account-blocked'] + datetime.timedelta(seconds=block_duration)).strftime("%d/%m/%Y, %H:%M:%S"), credentials[0]).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            client_socket.send(message_header + message)
+                            
+                            user['data'] = credentials[0].encode()
+                            # Add accepted socket to select() list
+                            sockets_list.append(client_socket)
+                            # user will have user_header and block duration
+                            blocked_clients[client_socket] = user
+                            clients[client_socket] = user
+                            break
+                            # client_socket.setblocking(True)
+                            # client_socket.shutdown(SHUT_RDWR)
+                        else:
+                            result = result + ' retry count: {}'.format(user['retry'])
+                            message = result.encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            client_socket.send(message_header + message)
+                    else:
+                        message = result.encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        client_socket.send(message_header + message)
+                # --- Authentication end ---
 
         # Else existing socket is sending a message
-        else:
+        elif notified_socket in clients and notified_socket not in blocked_clients:
+        # else:
             # Receive message
             message = receive_message(notified_socket)
 
+            # --- timeout start ---
             current_time = datetime.datetime.now()
-            print('{} - {}'.format(current_time, clients[notified_socket]['last-active']))
-            minus_timeout = current_time - datetime.timedelta(seconds=timeout)
-            if minus_timeout == clients[notified_socket]['last-active'] or minus_timeout > clients[notified_socket]['last-active']:
-                print('Connection timeout for: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
-
-                # Remove from list for socket.socket()
-                sockets_list.remove(notified_socket)
-
-                # Remove from our list of users
-                del clients[notified_socket]
-
-                # send indication of termination to client
-                notified_socket.shutdown(SHUT_RDWR)
-
-                continue
+            if 'last-active' in clients[notified_socket]:
+                print('{} - {}'.format(current_time, clients[notified_socket]['last-active']))
+                minus_timeout = current_time - datetime.timedelta(seconds=timeout)
+                if minus_timeout == clients[notified_socket]['last-active'] or minus_timeout > clients[notified_socket]['last-active']:
+                    print('Connection timeout for: {}'.format(clients[notified_socket]['data'].decode().split(',')[0]))
+                    # message = '{} timeout due to inactivity...'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
+                    # message_header = f"{len(message):<{20}}".encode()
+                    # client_socket.send(message_header + message)
+                    # Remove from list for socket.socket()
+                    sockets_list.remove(notified_socket)
+                    # Remove from our list of users
+                    del clients[notified_socket]
+                    # send indication of termination to client
+                    notified_socket.shutdown(SHUT_RDWR)
+                    notified_socket.close()
+                    continue
+            # --- timeout end ---
 
             # If False, client disconnected, cleanup
             if message is False:
@@ -195,10 +271,6 @@ while (1):
                     # Send user and message (both with their headers)
                     # We are reusing here message header sent by sender, and saved username header send by user when he connected
                     # client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
-        # user = clients[notified_socket]
-        # print('{}\'s last active: {}'.format(user['data'].decode().split(',')[0], user['last-active']))
-        # notified_socket.settimeout(timeout)
-        # print(notified_socket.gettimeout())
 
     # It's not really necessary to have this, but will handle some socket exceptions just in case
     for notified_socket in exception_sockets:

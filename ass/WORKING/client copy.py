@@ -55,6 +55,9 @@ while (1):
         if 'Welcome' in message:
             print(f'----- {username.decode()}\'s console -----')
             break
+        elif ('blocked' in message and username.decode() in message)or 'timeout' in message:
+            client_socket.setblocking(True)
+            sys.exit(1)
         elif 'Password' in message:
             username = username.decode()
             password = input("Password: ").strip() # .replace(" ", "")
@@ -131,7 +134,7 @@ while (1):
             # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
             if not len(user_header):
                 print('Connection closed by the server')
-                sys.exit()
+                sys.exit(0)
 
             # Convert header to int value
             user_length = int(user_header.decode())
