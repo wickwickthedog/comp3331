@@ -138,9 +138,6 @@ while (1):
         # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
         # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
         # If we got different error code - something happened
-        # if str(e) == "timed out":
-        #     client_socket.close()
-        #     sys.exit(0)
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
             sys.exit(0)
