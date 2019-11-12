@@ -17,7 +17,7 @@ import datetime
 server_host = 'localhost'
 server_port = 12000
 block_duration = 60
-timeout = 120
+timeout = 3
 
 # FIXME
 # for easy testing comment this
@@ -104,9 +104,9 @@ while (1):
             minus_timeout = current_time - datetime.timedelta(seconds=timeout)
             if minus_timeout == clients[timeout_socket]['last-active'] or minus_timeout > clients[timeout_socket]['last-active']:
                 print('Connection timeout for: {}'.format(clients[timeout_socket]['data'].decode().split(',')[0]))
-                # message = '{} timeout due to inactivity...'.format(clients[notified_socket]['data'].decode().split(',')[0]).encode()
-                # message_header = f"{len(message):<{20}}".encode()
-                # client_socket.send(message_header + message)
+                message = 'Connection Timeout due to inactivity... bye {}'.format(clients[timeout_socket]['data'].decode().split(',')[0]).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                timeout_socket.send(clients[timeout_socket]['header'] + clients[timeout_socket]['data'] + message_header + message)
 
                 # add to logged out list
                 logged_out_clients[timeout_socket] = clients[timeout_socket]
