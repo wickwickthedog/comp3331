@@ -28,3 +28,16 @@ def user_exists(username, clients, logged_out_clients):
         if username in logged_out_clients[sockets]['data'].decode():
             return True
     return False
+
+def check_blocked(notified_socket, clients):
+    for client_socket in clients:
+        if 'blocked-user' in clients[notified_socket]:
+            for blocked in clients[notified_socket]['blocked-user']:
+                if blocked['data'] == clients[client_socket]['data']:
+                    return True
+        if 'blocked-user' in clients[client_socket]:
+            for blocked in clients[client_socket]['blocked-user']:
+                if blocked['data'] == clients[notified_socket]['data']:
+                    return True
+    return False
+        
