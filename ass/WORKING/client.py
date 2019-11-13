@@ -15,7 +15,7 @@ import sys
 server_name = 'localhost'
 server_port = 12000
 
-# FIXME
+# FIXME before submitting
 # for easy testing comment this
 # server_name = sys.argv[1]
 # server_port = int(sys.argv[2])
@@ -46,7 +46,7 @@ client_socket.send(user_header + credentials)
 while (1):    
     try:
         user_header = client_socket.recv(20)
-         # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
+        # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
         # if not len(user_header):
         #     print('Connection closed by the server')
         #     sys.exit(0)
@@ -56,10 +56,11 @@ while (1):
         if 'Welcome' in message:
             print(f'----- {username.decode()}\'s console -----')
             break
+        elif 'Logged out' in message:
+            # exit successfully
+            sys.exit(0)
         elif ('blocked' in message and username.decode() in message) or 'timeout' in message or 'already online!' in message:
-            # client_socket.setblocking(True)
-            # client_socket.shutdown(SHUT_RDWR)
-            # client_socket.close()
+            # exit forced
             sys.exit(1)
         elif 'Password' in message:
             username = username.decode()
@@ -92,15 +93,17 @@ while (1):
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
             sys.exit(1)
-            # We just did not receive anything
-            # continue
+        # We just did not receive anything
+        continue
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: Authentication'.format(str(e)))
+        print('Reading error: Authentication FAIL: message(s) from server'.format(str(e)))
         sys.exit(1)
 # --- Authentication END ---
 
+# --- Receive message start ---
+# server need to return user + message
 while (1):
 
     # Wait for user to input a message
@@ -123,7 +126,7 @@ while (1):
             # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
             if not len(user_header):
                 print('Connection closed by the server')
-                sys.exit(0)
+                sys.exit(1)
 
             # Convert header to int value
             user_length = int(user_header.decode())
@@ -137,7 +140,10 @@ while (1):
             message = client_socket.recv(message_length).decode()
 
             # Print message
-            print(f'{user} > {message}')
+            if 'WICKWICK\'S SERVER' in user:
+                print(message)
+            else:
+                print(f'{user} > {message}')
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
@@ -146,11 +152,12 @@ while (1):
         # If we got different error code - something happened
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
-            sys.exit(0)
+            sys.exit(1)
         # We just did not receive anything
         continue
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: Message'.format(str(e)))
-        sys.exit(0)
+        print('Reading error: Message FAIL: message(s) from server'.format(str(e)))
+        sys.exit(1)
+# --- Receive message end ---

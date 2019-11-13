@@ -15,10 +15,7 @@ import sys
 server_name = 'localhost'
 server_port = 12000
 
-# timeout = -1
-# block_duration = -1
-
-# FIXME
+# FIXME before submitting
 # for easy testing comment this
 # server_name = sys.argv[1]
 # server_port = int(sys.argv[2])
@@ -48,15 +45,22 @@ client_socket.send(user_header + credentials)
 
 while (1):    
     try:
-        message_header = client_socket.recv(20)
-        message_length = int(message_header.decode())
-        message = client_socket.recv(message_length).decode()
+        user_header = client_socket.recv(20)
+        # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
+        # if not len(user_header):
+        #     print('Connection closed by the server')
+        #     sys.exit(0)
+        user_length = int(user_header.decode())
+        message = client_socket.recv(user_length).decode()
         print(message)
         if 'Welcome' in message:
             print(f'----- {username.decode()}\'s console -----')
             break
-        elif ('blocked' in message and username.decode() in message)or 'timeout' in message:
-            client_socket.setblocking(True)
+        elif 'Logged out' in message:
+            # exit successfully
+            sys.exit(0)
+        elif ('blocked' in message and username.decode() in message) or 'timeout' in message or 'already online!' in message:
+            # exit forced
             sys.exit(1)
         elif 'Password' in message:
             username = username.decode()
@@ -80,16 +84,6 @@ while (1):
             # print(user_header+username)
             # print(credentials.decode())
             client_socket.send(user_header + credentials)
-        # elif 'Timeout' in message:
-        #     timeout = int(message.split(',')[1])
-        #     # print(timeout)
-        #     block_duration = int(message.split(',')[3])
-        #     # print(block_duration)
-        #     # client_socket.settimeout(timeout)
-        #     break
-        # elif 'Block' in message:
-        #     block_duration = int(message.split(',')[1])
-        #     print(block_duration)
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
@@ -98,48 +92,46 @@ while (1):
         # If we got different error code - something happened
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
-            sys.exit(0)
-            # We just did not receive anything
-            # continue
+            sys.exit(1)
+        # We just did not receive anything
+        continue
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: Authentication'.format(str(e)))
-        sys.exit(0)
+        print('Reading error: Authentication FAIL: message(s) from server'.format(str(e)))
+        sys.exit(1)
 # --- Authentication END ---
 
+# --- Receive message start ---
+# server need to return user + message
 while (1):
 
-  
-    # print(client_socket.gettimeout())
     # Wait for user to input a message
-    message = input(f'{username.decode()} > ')
+    message = input(f'{username.decode()} > ').strip()
 
     # If message is not empty - send it
     if message:
-
         # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
         message = message.encode()
         message_header = f"{len(message):<{20}}".encode()
         client_socket.send(message_header + message)
 
-        # client_socket.settimeout(timeout)
     try:
         # Now we want to loop over received messages (there might be more than one) and print them
-        while True:
+        while (1):
 
-            # Receive our "header" containing username length, it's size is defined and constant
+            # Receive our "header" containing user length, it's size is defined and constant
             user_header = client_socket.recv(20)
 
             # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
             if not len(user_header):
                 print('Connection closed by the server')
-                sys.exit(0)
+                sys.exit(1)
 
             # Convert header to int value
             user_length = int(user_header.decode())
 
-            # Receive and decode username
+            # Receive and decode message
             user = client_socket.recv(user_length).decode().split(',')[0]
 
             # Now do the same for message (as we received username, we received whole message, there's no need to check if it has any length)
@@ -148,23 +140,24 @@ while (1):
             message = client_socket.recv(message_length).decode()
 
             # Print message
-            print(f'{user} > {message}')
+            if 'WICKWICK\'S SERVER' in user:
+                print(message)
+            else:
+                print(f'{user} > {message}')
 
     except IOError as e:
         # This is normal on non blocking connections - when there are no incoming data error is going to be raised
         # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
         # We are going to check for both - if one of them - that's expected, means no incoming data, continue as normal
         # If we got different error code - something happened
-        # if str(e) == "timed out":
-        #     client_socket.close()
-        #     sys.exit(0)
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
-            sys.exit(0)
+            sys.exit(1)
         # We just did not receive anything
         continue
 
     except Exception as e:
         # Any other exception - something happened, exit
-        print('Reading error: '.format(str(e)))
-        sys.exit(0)
+        print('Reading error: Message FAIL: message(s) from server'.format(str(e)))
+        sys.exit(1)
+# --- Receive message end ---
