@@ -1,0 +1,15 @@
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+
+# Compiled source #
+###################
+__pycache__/
+*.pyc
+*.class
+
+# Word temporary #
+##################
+# find . -name "~$*.doc*" -exec git rm -f "{}" \; doesn't seem to work
+~$*.doc*
