@@ -17,7 +17,7 @@ import datetime
 server_host = 'localhost'
 server_port = 12000
 block_duration = 60
-timeout = 3
+timeout = 120
 
 # FIXME
 # for easy testing comment this
@@ -100,7 +100,7 @@ while (1):
     for timeout_socket in list(clients):
         current_time = datetime.datetime.now()
         if 'last-active' in clients[timeout_socket]:
-            print('{} - {}'.format(current_time, clients[timeout_socket]['last-active']))
+            # print('{} - {}'.format(current_time, clients[timeout_socket]['last-active']))
             minus_timeout = current_time - datetime.timedelta(seconds=timeout)
             if minus_timeout == clients[timeout_socket]['last-active'] or minus_timeout > clients[timeout_socket]['last-active']:
                 print('Connection timeout for: {}'.format(clients[timeout_socket]['data'].decode().split(',')[0]))
@@ -194,14 +194,21 @@ while (1):
                 # --- block_duration end ---
 
                 # FIXME --- Check duplicate login---
-                # exist = False
-                # dup = None
-                # for exist_socket in clients:
-                #     if credentials[0] in clients[exist_socket]['data'].decode():
-                #         exist = True
-                #         dup = exist_socket
-                #         break
-
+                exist = False
+                dup = None
+                for exist_socket in clients:
+                    if credentials[0] in clients[exist_socket]['data'].decode():
+                        exist = True
+                        dup = exist_socket
+                        break
+                if exist == True:
+                    print(f'FAIL AUTHENTICATION :{credentials[0]} is already online!')
+                    message = f'SERVER: {credentials[0]} is already online!'.encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+                    # client_socket.shutdown(SHUT_RDWR)
+                    # client_socket.close()
+                    break
                 # --- Authentication start ---
                 # if exist == False:
                 result = authenticate(credentials)

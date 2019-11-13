@@ -56,7 +56,7 @@ while (1):
         if 'Welcome' in message:
             print(f'----- {username.decode()}\'s console -----')
             break
-        elif ('blocked' in message and username.decode() in message)or 'timeout' in message:
+        elif ('blocked' in message and username.decode() in message) or 'timeout' in message or 'already online!' in message:
             # client_socket.setblocking(True)
             # client_socket.shutdown(SHUT_RDWR)
             # client_socket.close()
@@ -91,14 +91,14 @@ while (1):
         # If we got different error code - something happened
         if e.errno != errno.EAGAIN and e.errno != errno.EWOULDBLOCK:
             print('Reading error: {}'.format(str(e)))
-            sys.exit(0)
+            sys.exit(1)
             # We just did not receive anything
             # continue
 
     except Exception as e:
         # Any other exception - something happened, exit
         print('Reading error: Authentication'.format(str(e)))
-        sys.exit(0)
+        sys.exit(1)
 # --- Authentication END ---
 
 while (1):
