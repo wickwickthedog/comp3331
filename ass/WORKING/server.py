@@ -119,7 +119,7 @@ while (1):
                 del online_clients[timeout_socket]
 
                 # send indication of termination to client
-                timeout_socket.shutdown(SHUT_RDWR)
+                # timeout_socket.shutdown(SHUT_RDWR)
                 timeout_socket.close()
     # --- timeout end ---
 
@@ -625,6 +625,11 @@ while (1):
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
             # --- logout end ---
+
+            # --- P2P commands start---
+
+
+            # --- P2p commands end ---
 
             # --- default ---
             else:
