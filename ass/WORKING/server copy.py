@@ -119,7 +119,7 @@ while (1):
                 del online_clients[timeout_socket]
 
                 # send indication of termination to client
-                timeout_socket.shutdown(SHUT_RDWR)
+                # timeout_socket.shutdown(SHUT_RDWR)
                 timeout_socket.close()
     # --- timeout end ---
 
@@ -221,7 +221,12 @@ while (1):
 
                     username = user['data'].decode().split(',')[0]
                     print('Accepted new connection from {}:{}, username: {}'.format(*client_address, username))
-                    # client_socket.send(f'Welcome {username}'.encode())
+                    
+                    # print('client socket is {}:{}'.format(client_socket.getsockname()[0], client_socket.getsockname()[1]))
+                    # print('client socket is {}'.format(client_address)) 
+                    # store for p2p
+                    user['private-connection'] = client_address
+                    # user['private-connection'] = (client_socket.getsockname()[0], client_socket.getsockname()[1])
 
                     message = '--------------------------'.encode()
                     message_header = f"{len(message):<{20}}".encode()
@@ -258,6 +263,28 @@ while (1):
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
+                    for online_socket in online_clients:
+                        blocked = False
+                        # But don't sent it to sender
+                        if client_socket != online_socket:
+                            # check if user in my block list
+                            if 'blocked-user' in online_clients[client_socket]:
+                                for i in range(len(online_clients[client_socket]['blocked-user'])):
+                                    if online_clients[online_socket]['data'] == online_clients[client_socket]['blocked-user'][i]['data']:
+                                        exist = True
+                                        blocked = True
+                                        break
+                            # check if me in user block list
+                            if 'blocked-user' in online_clients[online_socket]:
+                                for i in range(len(online_clients[online_socket]['blocked-user'])):
+                                    if online_clients[client_socket]['data'] == online_clients[online_socket]['blocked-user'][i]['data']:
+                                        exist = True
+                                        blocked = True
+                                        break
+                            if blocked == False:
+                                message = '{} logged in at {}'.format(user['data'].decode().split(',')[0], user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                                message_header = f"{len(message):<{20}}".encode()
+                                client_socket.send(user['header'] + user['data'] + message_header + message)
                     break
                 else:
                     if 'Password' in result:
@@ -432,8 +459,8 @@ while (1):
                 else:
                     # if self fail
                     if check[1] == user['data'].decode().split(',')[0]:
-                        print('{} can\'t MESSAGE SELF!'.format(check[1]))
-                        message = 'can\'t MESSAGE SELF: {}!'.format(check[1]).encode()
+                        print('FAIL: {} can\'t MESSAGE SELF!'.format(check[1]))
+                        message = 'Error, can\'t MESSAGE SELF: {}!'.format(check[1]).encode()
                         message_header = f"{len(message):<{20}}".encode()
                         notified_socket.send(user['header'] + user['data'] + message_header + message)
                     else:
@@ -601,11 +628,36 @@ while (1):
                 check = message['data'].decode().split(' ')
                 if len(check) == 1:
                     current_time = datetime.datetime.now()
+                    user['last-active'] = current_time
 
                     print('Connection close for: {} at {}'.format(user['data'].decode().split(',')[0], current_time.strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]))
                     message = 'Logged out at {} Bye!'.format(current_time.strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
+
+                    # broadcast log out message
+                    for client_socket in online_clients:
+                        blocked = False
+                        # But don't sent it to sender
+                        if client_socket != notified_socket:
+                            # check if user in my block list
+                            if 'blocked-user' in online_clients[notified_socket]:
+                                for i in range(len(online_clients[notified_socket]['blocked-user'])):
+                                    if online_clients[client_socket]['data'] == online_clients[notified_socket]['blocked-user'][i]['data']:
+                                        exist = True
+                                        blocked = True
+                                        break
+                            # check if me in user block list
+                            if 'blocked-user' in online_clients[client_socket]:
+                                for i in range(len(online_clients[client_socket]['blocked-user'])):
+                                    if online_clients[notified_socket]['data'] == online_clients[client_socket]['blocked-user'][i]['data']:
+                                        exist = True
+                                        blocked = True
+                                        break
+                            if blocked == False:
+                                message = '{} logged out at {}'.format(user['data'].decode().split(',')[0], user['last-active'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                                message_header = f"{len(message):<{20}}".encode()
+                                client_socket.send(user['header'] + user['data'] + message_header + message)
 
                     # add to logged out list
                     offline_clients[notified_socket] = online_clients[notified_socket]
@@ -625,6 +677,54 @@ while (1):
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
             # --- logout end ---
+
+            # FIXME --- P2P commands start---
+            elif command == 'startprivate':
+                check = message['data'].decode().split(' ')
+                if len(check) == 2:
+                    if check[1] == user['data'].decode().split(',')[0]:
+                        print('{} can\'t startprivate SELF!'.format(check[1]))
+                        message = 'can\'t startprivate SELF: {}!'.format(check[1]).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        break
+                    # check if user is online and not offline
+                    if user_exists(username=check[1], on9clients=online_clients, off9clients=offline_clients):
+                        if user_exists_On9clients(username=check[1], on9clients=online_clients) and not user_exists_Off9clients(username=check[1], off9clients=offline_clients):
+                            for client_socket in online_clients:
+                                if online_clients[client_socket]['data'].decode().split(',')[0] == user['data'].decode().split(',')[0]:
+                                    continue
+                                if online_clients[client_socket]['data'].decode().split(',')[0] == check[1]:
+                                    print('TO CONNECT {}:{}'.format(*online_clients[client_socket]['private-connection']))
+                                    print('notified_socket: {}:{}'.format(*online_clients[notified_socket]['private-connection']))
+                                    # notified_socket.connect(online_clients[client_socket]['private-connection'])
+                                    # new_user = user['data'].decode().split(',')[0].encode()
+                                    # new_user_header = f"{len(new_user):<{20}}".encode()
+                                    # message = f'{client_socket}'
+                                    message = "Connecting {} {}".format(online_clients[client_socket]['private-connection'][0], online_clients[client_socket]['private-connection'][1]).encode()
+                                    # message = "{} {} Please accept my connection from {} : {}".format(client_socket, online_clients[client_socket]['data'].decode().split(',')[0], online_clients[notified_socket]['private-connection'][0], online_clients[notified_socket]['private-connection'][1]).encode()
+                                    message_header = f"{len(message):<{20}}".encode()
+                                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                    # client_socket.send(user['header'] + user['data'] + message_header + message)
+                        else:
+                            print('FAIL: {} not online!'.format(check[1]))
+                            message = 'Error, {} not online!'.format(check[1]).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            notified_socket.send(user['header'] + user['data'] + message_header + message)
+                    # if user in credentials.txt but never log in
+                    # if user not in credentials.txt
+                    else:
+                        print('FAIL: {} doesn\'t exist!'.format(check[1]))
+                        message = 'Error, {} doesn\'t exist!'.format(check[1]).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                else:
+                    print('FAIL: Insufficient Args or Too Many Args: {}!'.format(user['data'].decode().split(',')[0]))
+                    message = 'Error, Insufficient Args or Too Many Args: {}!'.format(user['data'].decode().split(',')[0]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+
+            # --- P2p commands end ---
 
             # --- default ---
             else:

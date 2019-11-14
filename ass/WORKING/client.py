@@ -39,6 +39,7 @@ p2p_socket = socket(AF_INET, SOCK_STREAM)
 # ensures that socket resuse is setup BEFORE it is bound. Will avoid the TIME_WAIT issue
 p2p_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1)
 
+# p2p_socket.bind((server_name, server_port))
 p2p_socket.bind((client_socket.getsockname()[0], client_socket.getsockname()[1]))
 
 p2p_socket.listen()
@@ -48,6 +49,8 @@ sockets_list = [client_socket, p2p_socket]
 
 # List of connected clients - socket as a key, user header and credentials as data
 p2p_clients = {}
+
+print(f'my addr: {server_name} : {server_port}')
 
 print(f'client_socket to receive from server: {client_socket.getsockname()[0]} : {client_socket.getsockname()[1]}')
 
@@ -130,13 +133,14 @@ while (1):
 
 
 while (1):
-    
+
     for notified_socket in read_sockets:
         # FIXME Wait for user to input a message
         message = input(f'{username.decode()} > ').strip()
 
         # new connections to p2p socket
         if notified_socket is p2p_socket:
+            print("hi?")
             p2p_client, p2p_address = p2p_socket.accept()
             data = None
             try:
@@ -147,19 +151,31 @@ while (1):
                 header_length = int(user_header.decode())
 
                 data = {'header': user_header, 'data': p2p_socket.recv(header_length)}
+
+                message_header = p2p_clients.recv(20)
+                message_length = int(message_header.decode())
+                message = p2p_clients.recv(message_length).decode()
             except:
                 data = None
 
             private_user = data
 
             if private_user != None:
-                sockets_list.append(notified_socket)
+                print(message)
+
+                sockets_list.append(p2p_client)
 
                 p2p_clients[notified_socket] = private_user
-                print('Accepted new connection from {}:{}, username: {}'.format(*p2p_address, private_user['data'].decode()))
+                print('Accepted new connection from {}:{}, sender: {}'.format(*p2p_address, private_user['data'].decode().split(',')[0]))
+                message = '{} Accepted your PRIVATE connection, {}'.format(username.decode(), private_user['data'].decode().split(',')[0]).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                p2p_clients.send(user_header + credentials + message_header + message)
             else:
-                print('Fail to accept new connection')
-            
+                # sockets_list.remove(notified_socket)
+                print('Failed to accept new connection from {}:{}, sender: {}'.format(*p2p_address, private_user['data'].decode().split(',')[0]))
+                message = '{} Failed to accept your PRIVATE connection, {}'.format(username.decode(), private_user['data'].decode().split(',')[0]).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                p2p_clients.send(user_header + credentials + message_header + message)
         # server need to return user + message
         # --- Receive message from server start ---
         # TODO add
@@ -194,9 +210,39 @@ while (1):
                     message_length = int(message_header.decode())
                     message = client_socket.recv(message_length).decode()
 
+                    # if private_user != None:
+                    #     print(message)
+                    #     p2p_socket.connect((message.split(' ')[0], message.split(' ')[1]))
+                    #     print('hi')
+                    #     p2p_socket.setblocking(False)
+
+                    #     sockets_list.append(notified_socket)
+
+                    #     p2p_clients[notified_socket] = private_user
+                        # print('Accepted new connection from {}:{}, sender: {}'.format(*p2p_address, private_user['data'].decode().split(',')[0]))
+                        # message = '{} Accepted your PRIVATE connection, {}'.format(username.decode(), private_user['data'].decode().split(',')[0]).encode()
+                        # message_header = f"{len(message):<{20}}".encode()
+                        # p2p_clients.send(user_header + credentials + message_header + message)
+                    # else:
+                    #     print('Failed to accept new connection from {}:{}, sender: {}'.format(*p2p_address, private_user['data'].decode().split(',')[0]))
+                    #     message = '{} Failed to accept your PRIVATE connection, {}'.format(username.decode(), private_user['data'].decode().split(',')[0]).encode()
+                    #     message_header = f"{len(message):<{20}}".encode()
+                    #     p2p_clients.send(user_header + credentials + message_header + message)
+
                     # Print message
-                    if 'WICKWICK\'S SERVER' in user:
+                    if 'WICKWICK\'S SERVER' in user or 'logged':
                         print(message)
+                    elif 'Connecting' in message:
+                        address = (message.split(' ',1)[1]).split(' ')
+                        print(type(address))
+                        print(f'Attempt to connect {address[0]} : {address[1]}')
+                        new_socket = socket(AF_INET, SOCK_STREAM)
+                        new_socket.connect((address[0],int(address[1])))
+                        # print("done")
+                        user_header = f"{len(user.encode()):<{20}}".encode()
+                        new_socket.send(user_header + user.encode())
+                        # print("done")
+                        # print("Fail to accept connection, already have one conn")
                     else:
                         print(f'{user} > {message}')
 
@@ -218,6 +264,7 @@ while (1):
         # --- Receive message from server end ---
 
         else:
+            print("hi2")
             # If message is not empty - send it
             if message:
                 # Encode message to bytes, prepare header and convert to bytes, like for username above, then send
@@ -234,14 +281,14 @@ while (1):
 
                     # If we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
                     if not len(user_header):
-                        print('Connection closed by the server')
+                        print('Connection closed by the p2p')
                         sys.exit(1)
 
                     # Convert header to int value
                     user_length = int(user_header.decode())
 
                     # Receive and decode message
-                    user = client_socket.recv(user_length).decode().split(',')[0]
+                    user = client_socket.recv(user_length).decode() #.split(',')[0]
 
                     # Now do the same for message (as we received username, we received whole message, there's no need to check if it has any length)
                     message_header = p2p_socket.recv(20)
@@ -249,10 +296,10 @@ while (1):
                     message = p2p_socket.recv(message_length).decode()
 
                     # Print message
-                    # if 'WICKWICK\'S SERVER' in user:
-                    #     print(message)
-                    # else:
-                    print(f'PRIVATE MSG from {user} > {message}')
+                    if 'Accepted' in message or 'Failed' in message:
+                        print(message)
+                    else:
+                        print(f'PRIVATE MSG from {user} > {message}')
 
             except IOError as e:
                 # This is normal on non blocking connections - when there are no incoming data error is going to be raised
