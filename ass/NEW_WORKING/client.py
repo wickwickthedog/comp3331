@@ -123,50 +123,57 @@ while (1):
                     command = input(f'{username.decode()} > ').strip()
                     # is_private = False
                     if command is '':
-                        continue
-
-                    commands = command.split(' ')
-                    if 'private' in commands[0]:
-                        is_private = True
-                        break
-                    message = command.encode()
-                    message_header = f"{len(message):<{20}}".encode()
+                        message = command.encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                    else:
+                        commands = command.split(' ')
+                        if 'private' in commands[0]:
+                            is_private = True
+                            break
+                        message = command.encode()
+                        message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(message_header + message)
 
-                    # need this else my first message from server will be lost
-                    time.sleep(.6)
+                    while (1):
+                        # need this else need to press enter to get the message
+                        time.sleep(1)
+                        # receive "header" containing user length, it's size is defined and constant
+                        user_header = notified_socket.recv(20)
 
-                    # receive "header" containing user length, it's size is defined and constant
-                    user_header = notified_socket.recv(20)
+                        # if we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
+                        if not len(user_header):
+                            print('Connection closed by the server')
+                            sys.exit(1)
 
-                    # if we received no data, server gracefully closed a connection, for example using socket.close() or socket.shutdown(socket.SHUT_RDWR)
-                    if not len(user_header):
-                        print('Connection closed by the server')
-                        sys.exit(1)
+                        # convert header to int value
+                        user_length = int(user_header.decode())
 
-                    # convert header to int value
-                    user_length = int(user_header.decode())
+                        # receive and decode message
+                        user = notified_socket.recv(user_length).decode()
 
-                    # receive and decode message
-                    user = notified_socket.recv(user_length).decode()
+                        # now do the same for message (as we received username, 
+                        # we received whole message, there's no need to check if it has any length)
+                        message_header = notified_socket.recv(20)
+                        message_length = int(message_header.decode())
+                        message = notified_socket.recv(message_length).decode()
 
-                    # now do the same for message (as we received username, 
-                    # we received whole message, there's no need to check if it has any length)
-                    message_header = notified_socket.recv(20)
-                    message_length = int(message_header.decode())
-                    message = notified_socket.recv(message_length).decode()
-
-                    # print message
-                    if 'WICKWICK\'S SERVER' in user:
-                        print(message)
-                        # send indication of termination to client
-                        notified_socket.shutdown(SHUT_RDWR)
-                        notified_socket.close()
-                        sys.exit(1)
-                    elif 'Logged' in message or 'Error' in message:
-                        print(message)
-                    else:
-                        print(f'{user} > {message}')
+                        # print message
+                        if 'WICKWICK\'S SERVER' in user:
+                            print(message)
+                            # send indication of termination to client
+                            notified_socket.shutdown(SHUT_RDWR)
+                            notified_socket.close()
+                            sys.exit(1)
+                        elif f'No command specified, {user}!' in message or f'successful, {user}!' in message:
+                            break
+                        elif 'Logged' in message or 'Error,' in message:
+                            print(message)
+                            break
+                        elif 'whoelse ' in message:
+                            client_count = int(message.split(' ')[1])
+                            print(f'Number of online clients: {client_count}')
+                        else:
+                            print(f'{user} > {message}')
             except IOError as e:
                 # This is normal on non blocking connections - when there are no incoming data error is going to be raised
                 # Some operating systems will indicate that using AGAIN, and some using WOULDBLOCK error code
