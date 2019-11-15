@@ -121,6 +121,8 @@ while (1):
                 # send indication of termination to client
                 # timeout_socket.shutdown(SHUT_RDWR)
                 timeout_socket.close()
+                print(f'Number of On9 clients: {len(list(online_clients))}')
+                print(f'Number of Off9 clients: {len(list(offline_clients))}')
     # --- timeout end ---
 
     # Iterate over notified sockets
@@ -188,6 +190,7 @@ while (1):
                                 client_socket.close()
                             break
                     continue
+                print(f'Number of blocked clients: {len(list(blocked_clients))}')
                 # if user tries to login after block with new client_socket
                 if check == credentials[0]:
                     break
@@ -228,18 +231,11 @@ while (1):
                     user['private-connection'] = client_address
                     # user['private-connection'] = (client_socket.getsockname()[0], client_socket.getsockname()[1])
 
-                    message = '--------------------------'.encode()
-                    message_header = f"{len(message):<{20}}".encode()
-                    client_socket.send(message_header + message)
-
                     message = '---- offline messages ----'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
-                    message = '--------------------------'.encode()
-                    message_header = f"{len(message):<{20}}".encode()
-                    client_socket.send(message_header + message)
-
+                    offline_msg = False
                     # update logged out clients list and send all offline message(s)
                     for offline_socket in offline_clients:
                         if offline_clients[offline_socket]['data'].decode().split(',')[0] == credentials[0]:
@@ -250,16 +246,21 @@ while (1):
                                         message = '{} > {}'.format(msg['sender'].decode().split(',')[0], msg['message'].decode()).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         client_socket.send(message_header + message)
+                                        offline_msg = True
                                 del offline_messages[offline_socket]
                             del offline_clients[offline_socket]
                             break
+                    if not offline_msg:
+                        message = '           None           '.encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        client_socket.send(message_header + message)
 
                     message = '--------------------------'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
                     # send login date time
-                    message = 'Welcome back {}! You logged in at: {}'.format(username, user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                    message = 'Welcome back {}! You Logged in at: {}'.format(username, user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
 
@@ -282,9 +283,10 @@ while (1):
                                         blocked = True
                                         break
                             if blocked == False:
-                                message = '{} logged in at {}'.format(user['data'].decode().split(',')[0], user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                                message = '{} Logged in at {}'.format(user['data'].decode().split(',')[0], user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
                                 message_header = f"{len(message):<{20}}".encode()
-                                client_socket.send(user['header'] + user['data'] + message_header + message)
+                                online_socket.send(user['header'] + user['data'] + message_header + message)
+                    print(f'Number of On9 clients: {len(list(online_clients))}')
                     break
                 else:
                     if 'Password' in result:
@@ -494,7 +496,7 @@ while (1):
                                         else:
                                             offline_messages[client_socket] = [{'sender_header': user['header'], 'sender': user['data'], 'recipient': offline_clients[client_socket]['data'], 'message':msg }]
                                         print('off9 MESSAGE sent to {} from {}'.format(recipient, user['data'].decode().split(',')[0]))
-                                        message = 'sent message to: {} successful!'.format(recipient).encode()
+                                        message = 'sent offline message to: {} successful!'.format(recipient).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
                                     else:
@@ -655,7 +657,7 @@ while (1):
                                         blocked = True
                                         break
                             if blocked == False:
-                                message = '{} logged out at {}'.format(user['data'].decode().split(',')[0], user['last-active'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                                message = '{} Logged out at {}'.format(user['data'].decode().split(',')[0], user['last-active'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
                                 message_header = f"{len(message):<{20}}".encode()
                                 client_socket.send(user['header'] + user['data'] + message_header + message)
 
@@ -671,6 +673,7 @@ while (1):
                     # send indication of termination to client
                     notified_socket.shutdown(SHUT_RDWR)
                     notified_socket.close()
+                    print(f'Number of Off9 clients: {len(list(offline_clients))}')
                 else:
                     print('FAIL: Too many Args: {}!'.format(user['data'].decode().split(',')[0]))
                     message = 'Error, Too many Args: {}!'.format(user['data'].decode().split(',')[0]).encode()
