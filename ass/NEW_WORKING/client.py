@@ -3,7 +3,7 @@ Used the sample code as reference from
 https://pythonprogramming.net/client-chatroom-sockets-tutorial-python-3/?completed=/server-chatroom-sockets-tutorial-python-3/
 also combining the code from server to here
 Coding: utf-8, Python 3
-Editted by: z5147986
+Author: z5147986, wickwickthedog
 Usage: 
 (default) - pyhton3 client.py <host> <port>
 '''
@@ -87,9 +87,13 @@ while (1):
                 if message is False:
                     continue
                 result = message['data'].decode()
-                print(result)
-                if 'Welcome' in result:
+                if 'offline messages successful, ' in result:
                     Logged_in = True
+                else:
+                    print(result)
+                if 'Welcome' in result:
+                    # Logged_in = True
+                    continue
                 elif 'unblocked' in result:
                     continue
                 elif 'blocked' in result or 'already online' in result or 'timeout' in result:
@@ -121,6 +125,7 @@ while (1):
                 # Now we want to loop over received messages (there might be more than one) and print them
                 while (1):
                     command = input(f'{username.decode()} > ').strip()
+                    time.sleep(.5)
                     # is_private = False
                     if command is '':
                         message = command.encode()
@@ -158,7 +163,7 @@ while (1):
                         message = notified_socket.recv(message_length).decode()
 
                         # print message
-                        if 'WICKWICK\'S SERVER' in user:
+                        if 'WICKWICK\'S SERVER' in user or f'Logged out successful at ' in message:
                             print(message)
                             # send indication of termination to client
                             notified_socket.shutdown(SHUT_RDWR)
@@ -166,7 +171,7 @@ while (1):
                             sys.exit(1)
                         elif f'No command specified, {user}!' in message or f'successful, {user}!' in message:
                             break
-                        elif 'Logged' in message or 'Error,' in message:
+                        elif f'{user} Logged out at ' in message or 'Error,' in message:
                             print(message)
                             break
                         elif 'whoelse ' in message:

@@ -55,3 +55,64 @@ def user_exists_On9clients(username, on9clients):
         if username in on9clients[sockets]['data'].decode():
             return True
     return False
+
+# if user exist in offline clients list
+def user_exists_Off9clients(username, off9clients):
+    if username is '' or username is None or len(list(off9clients)) == 0:
+        return False
+    for sockets in off9clients:
+            if username in off9clients[sockets]['data'].decode():
+                return True
+    return False
+    
+# if user exist in online or offline clients list
+def user_exists(username, on9clients, off9clients):
+    if user_exists_On9clients(username, on9clients) or user_exists_Off9clients(username, off9clients):
+        return True
+    return False
+
+# if user in my block list
+# blocked-user is an array of dicts
+def user_blocked_list(my_socket, to_check_socket, on9clients):
+    if my_socket is None or to_check_socket is None or len(list(on9clients)) == 0:
+        return False
+    for blocked in on9clients[my_socket]['blocked-user']:
+        if blocked['data'] == on9clients[to_check_socket]['data']:
+            return True
+    return False
+
+# if user block or is blocked by someone
+def user_blocked_On9clients(my_socket, on9clients):
+    if my_socket is None or len(list(on9clients)) == 0:
+        return False
+    for client_socket in on9clients:
+        if 'blocked-user' in on9clients[my_socket]:
+            for blocked in on9clients[my_socket]['blocked-user']:
+                if blocked['data'] == on9clients[client_socket]['data']:
+                    return True
+        if 'blocked-user' in on9clients[client_socket]:
+            for blocked in on9clients[client_socket]['blocked-user']:
+                if blocked['data'] == on9clients[my_socket]['data']:
+                    return True
+    return False
+
+# if user is blocked by someone who is offline
+def user_blocked_Off9clients(my_socket, off9clients, on9clients):
+    if my_socket is None or len(list(on9clients)) == 0 or len(list(off9clients)) == 0:
+        return False
+    for client_socket in off9clients:
+        if 'blocked-user' in off9clients[client_socket]:
+            for blocked in off9clients[client_socket]['blocked-user']:
+                if blocked['data'] == on9clients[my_socket]['data']:
+                    return True
+    return False
+
+# if user block or is blocked by someone online or offline
+def user_blocked(my_socket, on9clients, off9clients):
+    if user_blocked_On9clients(my_socket, on9clients) or user_blocked_Off9clients(my_socket, off9clients, on9clients):
+        return True
+    return False
+
+# return len of encoded message after split()
+def length_encoded_msg(encoded_msg):
+	return len(encoded_msg.decode().split(' '))

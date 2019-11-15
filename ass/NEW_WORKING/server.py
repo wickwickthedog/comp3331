@@ -2,14 +2,14 @@
 Used the sample code as reference from 
 https://pythonprogramming.net/server-chatroom-sockets-tutorial-python-3/
 Coding: utf-8
-Editted by: z5147986
+Author: z5147986, wickwickthedog
 Usage: 
 (default) - pyhton3 server.py <port> <block duration> <timeout>
 '''
 
 from socket import *
 from select import *
-from utility import receive_message, authenticate, user_exists_On9clients, user_exists_Off9clients, user_exists, user_blocked_list, length_encoded_msg
+from utility import receive_message, authenticate, user_exists_On9clients, user_exists_Off9clients, user_exists, user_blocked_list, user_blocked,length_encoded_msg
 import sys
 import time
 import datetime
@@ -54,6 +54,9 @@ blocked_clients = {}
 
 # List of disconnected clients: socket as key
 offline_clients = {}
+
+# List of offline messages
+offline_messages = {}
 
 print(f'Listening for connections on {server_host}:{server_port}\n')
 
@@ -154,12 +157,31 @@ while (1):
                     # user will have keys: header, data, logged-in, last-active
                     online_clients[client_socket] = user
 
-                    print('Accepted new connection from {}:{} [{}]\n'.format(*client_address, user['data'].decode()))
+                    print('Accepted new connection from {}:{} ~> {}'.format(*client_address, user['data'].decode()))
 
                     # send login date time
                     message = 'Welcome back {}! You Logged in at: {}'.format(user['data'].decode(), user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
+
+                    # update logged out clients list and send all offline message(s)
+                    for offline_socket in offline_clients:
+                        if offline_clients[offline_socket]['data'].decode() == user['data'].decode():
+                            if offline_socket in offline_messages:
+                                for msg in offline_messages[offline_socket]:
+                                    # print(offline_messages[msg])
+                                    if user['data'].decode() == msg['recipient'].decode():
+                                        message = '{} > {}'.format(msg['sender'].decode(), msg['message'].decode()).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        client_socket.send(message_header + message)
+                                del offline_messages[offline_socket]
+                            del offline_clients[offline_socket]
+                            break
+                    
+                    message = 'offline messages successful, {}'.format(user['data'].decode()).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    client_socket.send(message_header + message)
+
                     break
                 elif 'Password' in result:
                     retry_count += 1
@@ -270,8 +292,15 @@ while (1):
                     # update message header
                     message['header'] = f"{len(message['data']):<{20}}".encode()
                     for client_socket in online_clients:
-                        # TODO check blocked
                         if client_socket != notified_socket:
+                            if 'blocked-user' in user:
+                                # check if user in my block list
+                                if user_blocked_list(my_socket=notified_socket, to_check_socket=client_socket, on9clients=online_clients):
+                                    continue
+                            if 'blocked-user' in online_clients[client_socket]:
+                                # check if me in user block list
+                                if user_blocked_list(my_socket=client_socket, to_check_socket=notified_socket, on9clients=online_clients):
+                                     continue
                             client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
                     # successful
                     message = 'broadcast successful, {}!'.format(user['data'].decode()).encode()
@@ -369,6 +398,83 @@ while (1):
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
             # --- whoelsesince end ---
+
+            # --- message start ---
+            elif command == 'message':
+                if length_encoded_msg(encoded_msg=message['data']) < 3:
+                    #FIXME uncomment debugging print before submitting
+                    # print('FAIL: Insufficient Args, {}!'.format(user['data'].decode().split(',')[0]))
+                    message = 'Error, Insufficient Args, {}!'.format(user['data'].decode().split(',')[0]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+                else:
+                    recipient = message['data'].decode().split(' ')[1]
+                    # if self fail
+                    if recipient == user['data'].decode().split(',')[0]:
+                        #FIXME uncomment debugging print before submitting
+                        # print('FAIL: {} can\'t MESSAGE SELF!'.format(recipient))
+                        message = 'Error, can\'t message self: {}!'.format(recipient).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                    else:
+                        msg = message['data'].decode().split(' ', 2)[2]
+
+                        if user_exists(username=recipient, on9clients=online_clients, off9clients=offline_clients):
+                            # check if recipient is online
+                            for client_socket in online_clients:
+                                if client_socket != notified_socket and online_clients[client_socket]['data'].decode() == recipient:
+                                    # if send successful sender will NOT get notified
+                                    if user_blocked(my_socket=notified_socket, on9clients=online_clients, off9clients=offline_clients):
+                                        message = 'Error, can\'t send message to: {}! *{} blocked you...'.format(recipient, recipient).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                    else:
+                                        #FIXME uncomment debugging print before submitting
+                                        # print('on9 MESSAGE sent to {} from {}'.format(recipient, user['data'].decode().split(',')[0]))
+                                        msg = msg.strip().encode()
+                                        message_header = f"{len(msg):<{20}}".encode()
+                                        client_socket.send(user['header'] + user['data'] + message_header + msg)
+                                        # successful
+                                        message = 'online message successful, {}!'.format(user['data'].decode()).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+
+                            # check if recipient is offline
+                            for client_socket in offline_clients:
+                                if client_socket != notified_socket and offline_clients[client_socket]['data'].decode() == recipient:
+                                    # if send successful sender will get notified
+                                    if not user_blocked(my_socket=notified_socket, on9clients=online_clients, off9clients=offline_clients):
+                                        msg = msg.strip().encode()
+                                        # message_header = f"{len(msg):<{20}}".encode()
+                                        # client_socket.send(user['header'] + user['data'] + message_header + msg)
+                                        if client_socket in offline_messages:
+                                            offline_messages[client_socket].append({'sender_header': user['header'], 'sender': user['data'], 'recipient': offline_clients[client_socket]['data'], 'message':msg })
+                                        else:
+                                            offline_messages[client_socket] = [{'sender_header': user['header'], 'sender': user['data'], 'recipient': offline_clients[client_socket]['data'], 'message':msg }]
+                                        #FIXME uncomment debugging print before submitting
+                                        # print('off9 MESSAGE sent to {} from {}'.format(recipient, user['data'].decode().split(',')[0]))
+                                        message = 'sent offline message to: {} successful!'.format(recipient).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        # successful
+                                        message = 'offline message successful, {}!'.format(user['data'].decode()).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                    else:
+                                        #FIXME uncomment debugging print before submitting
+                                        # print(f'off9 MESSAGE FAIL: can\'t send to {recipient}')
+                                        message = 'Error, can\'t send offline message to: {}! *{} blocked you...'.format(recipient, recipient).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        # if user in credentials.txt but never log in
+                        # if user not in credentials.txt
+                        else:
+                            #FIXME uncomment debugging print before submitting
+                            # print('FAIL: {} doesn\'t exist!'.format(recipient))
+                            message = 'Error, {} doesn\'t exist!'.format(recipient).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            notified_socket.send(user['header'] + user['data'] + message_header + message)
+            # --- message end ---
 
             # --- block start ---
             elif command == 'block':
@@ -471,11 +577,11 @@ while (1):
                                     notified_socket.send(user['header'] + user['data'] + message_header + message)
                                     del user['blocked-user'][i]
                                     # successful
-                                    message = 'block successful, {}!'.format(user['data'].decode()).encode()
+                                    message = 'unblock successful, {}!'.format(user['data'].decode()).encode()
                                     message_header = f"{len(message):<{20}}".encode()
                                     notified_socket.send(user['header'] + user['data'] + message_header + message)
                                     break
-                                    
+
                             #FIXME uncomment debugging print before submitting
                             # print('FAIL: to unblock: {}!'.format(username))
                             message = 'Error, fail to unblock {}!'.format(username).encode()
@@ -490,6 +596,64 @@ while (1):
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
             # --- unblock end ---
 
+            # --- logout start ---
+            elif command == 'logout':
+                if length_encoded_msg(encoded_msg=message['data']) == 1:
+                    current_time = datetime.datetime.now()
+                    user['last-active'] = current_time
+
+                    print('\nConnection close for: {} at {}\n'.format(user['data'].decode(), current_time.strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]))
+                    message = 'Logged out successful at {} Bye!'.format(current_time.strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+
+                    # broadcast log out message
+                    for client_socket in online_clients:
+                        blocked = False
+                        # But don't sent it to sender
+                        if client_socket != notified_socket:
+                            if 'blocked-user' in user:
+                                # check if user in my block list
+                                if user_blocked_list(my_socket=notified_socket, to_check_socket=client_socket, on9clients=online_clients):
+                                    continue
+                            if 'blocked-user' in online_clients[client_socket]:
+                                # check if me in user block list
+                                if user_blocked_list(my_socket=client_socket, to_check_socket=notified_socket, on9clients=online_clients):
+                                     continue
+                            message = '{} Logged out at {}'.format(user['data'].decode(), user['last-active'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            client_socket.send(user['header'] + user['data'] + message_header + message)
+
+                    # add to logged out list
+                    offline_clients[notified_socket] = user
+
+                    # Remove from list for socket.socket()
+                    sockets_list.remove(notified_socket)
+                    # Remove from our list of users
+                    del online_clients[notified_socket]
+
+                    #FIXME uncomment debugging print before submitting
+                    # print(f'Number of Off9 clients: {len(list(offline_clients))}')
+                    # successful
+                    message = 'logout successful, {}!'.format(user['data'].decode()).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+                else:
+                    #FIXME uncomment debugging print before submitting
+                    # print('FAIL: Too many Args: {}!'.format(user['data'].decode().split(',')[0]))
+                    message = 'Error, Too many Args: {}!'.format(user['data'].decode().split(',')[0]).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)
+            # --- logout end ---
+
+            # --- P2P commands start---
+            # elif command == 'startprivate':
+            # P2P in that elif notified_socket in online_clients
+            # if len(clients) == 2:
+            #     print("Two clients have connected. Exchanging details for P2P")
+            #     clients[0].send(tupleToDelimString(clients[1].getpeername()).encode())
+            #     clients[1].send(tupleToDelimString(clients[0].getpeername()).encode())
+            
             # --- default ---
             else:
                 #FIXME uncomment debugging print before submitting
@@ -498,12 +662,7 @@ while (1):
                 message_header = f"{len(message):<{20}}".encode()
                 notified_socket.send(user['header'] + user['data'] + message_header + message)
             # --- Commands end ---
-            # P2P in that elif notified_socket in online_clients
-            # if len(clients) == 2:
-            #     print("Two clients have connected. Exchanging details for P2P")
-            #     clients[0].send(tupleToDelimString(clients[1].getpeername()).encode())
-            #     clients[1].send(tupleToDelimString(clients[0].getpeername()).encode())
-    time.sleep(1)
+    time.sleep(.25)
 
 print("Server connection closed!")
 sys.exit()
