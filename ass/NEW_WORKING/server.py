@@ -17,7 +17,7 @@ import datetime
 server_host = 'localhost'
 server_port = 12000
 block_duration = 60
-timeout = 120
+timeout = 10
 
 # FIXME before submitting
 # server_host = 'localhost'
@@ -194,6 +194,12 @@ while (1):
         # server will reuse message header sent by sender for certain commands like message, broadcasting, etc
         elif notified_socket in online_clients:
 
+            # retrive user from list of online clients
+            user = online_clients[notified_socket]
+
+            if user is False:
+                continue
+
             # Receive message
             message = receive_message(notified_socket)
 
@@ -227,7 +233,7 @@ while (1):
                 server_header = f"{len(server):<{20}}".encode()
                 message = 'Connection timeout at {} due to inactivity. Bye {}!'.format((user['last-active'] + datetime.timedelta(seconds=timeout)).strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3], user['data'].decode()).encode()
                 message_header = f"{len(message):<{20}}".encode()
-                timeout_socket.send(server_header + server + message_header + message)
+                notified_socket.send(server_header + server + message_header + message)
 
                 # add to offline list
                 offline_clients[notified_socket] = user
@@ -237,10 +243,6 @@ while (1):
 
                 # Remove from our list of users
                 del online_clients[notified_socket]
-
-                # send indication of termination to client
-                timeout_socket.shutdown(SHUT_RDWR)
-                timeout_socket.close()
                 continue
             # --- timeout end ---
 

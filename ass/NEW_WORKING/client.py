@@ -93,6 +93,7 @@ while (1):
                 elif 'unblocked' in result:
                     continue
                 elif 'blocked' in result or 'already online' in result or 'timeout' in result:
+                    # send indication of termination
                     client_socket.shutdown(SHUT_RDWR)
                     client_socket.close()
                     sys.exit(1)
@@ -133,7 +134,7 @@ while (1):
                     notified_socket.send(message_header + message)
 
                     # need this else my first message from server will be lost
-                    time.sleep(.5)
+                    time.sleep(.6)
 
                     # receive "header" containing user length, it's size is defined and constant
                     user_header = notified_socket.recv(20)
@@ -147,16 +148,22 @@ while (1):
                     user_length = int(user_header.decode())
 
                     # receive and decode message
-                    user = notified_socket.recv(user_length).decode().split(',')[0]
+                    user = notified_socket.recv(user_length).decode()
 
                     # now do the same for message (as we received username, 
                     # we received whole message, there's no need to check if it has any length)
-                    message_header = client_socket.recv(20)
+                    message_header = notified_socket.recv(20)
                     message_length = int(message_header.decode())
                     message = notified_socket.recv(message_length).decode()
 
                     # print message
-                    if 'WICKWICK\'S SERVER' is user or 'Logged' in message or 'Error' in message:
+                    if 'WICKWICK\'S SERVER' in user:
+                        print(message)
+                        # send indication of termination to client
+                        notified_socket.shutdown(SHUT_RDWR)
+                        notified_socket.close()
+                        sys.exit(1)
+                    elif 'Logged' in message or 'Error' in message:
                         print(message)
                     else:
                         print(f'{user} > {message}')
