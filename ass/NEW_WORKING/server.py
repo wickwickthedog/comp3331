@@ -71,7 +71,8 @@ while (1):
 
             # Accept new connection
             client_socket, client_address = server_socket.accept()
-
+            print(f'client_socket: {client_socket.getsockname()}')
+            print(f'client_address: {client_address}')
             # to track retry count
             retry_count = 0
             while (1):
@@ -282,6 +283,7 @@ while (1):
                 message = 'No command specified, {}!'.format(user['data'].decode()).encode()
                 message_header = f"{len(message):<{20}}".encode()
                 notified_socket.send(user['header'] + user['data'] + message_header + message)
+                break
             # --- empty ---
 
             # --- broadcast start ---
@@ -300,12 +302,13 @@ while (1):
                             if 'blocked-user' in online_clients[client_socket]:
                                 # check if me in user block list
                                 if user_blocked_list(my_socket=client_socket, to_check_socket=notified_socket, on9clients=online_clients):
-                                     continue
+                                    continue
                             client_socket.send(user['header'] + user['data'] + message['header'] + message['data'])
                     # successful
                     message = 'broadcast successful, {}!'.format(user['data'].decode()).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
+                    break
                 else:
                     #FIXME uncomment debugging print before submitting
                     # print('FAIL: No message to broadcast, {}'.format(user['data'].decode()))
@@ -342,6 +345,7 @@ while (1):
                     message = 'whoelse successful, {}!'.format(user['data'].decode()).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
+                    break
                 else:
                     #FIXME uncomment debugging print before submitting
                     # print('FAIL: whoelse need no args, {}'.format(online_clients[notified_socket]['data'].decode().split(',')[0]))
@@ -391,6 +395,7 @@ while (1):
                     message = 'whoelsesince successful, {}!'.format(user['data'].decode()).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     notified_socket.send(user['header'] + user['data'] + message_header + message)
+                    break
                 else:
                     #FIXME uncomment debugging print before submitting
                     # print('FAIL: Insufficient Args or Too Many Args, {}'.format(online_clients[notified_socket]['data'].decode().split(',')[0]))
@@ -428,6 +433,7 @@ while (1):
                                         message = 'Error, can\'t send message to: {}! *{} blocked you...'.format(recipient, recipient).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        break
                                     else:
                                         #FIXME uncomment debugging print before submitting
                                         # print('on9 MESSAGE sent to {} from {}'.format(recipient, user['data'].decode().split(',')[0]))
@@ -438,6 +444,7 @@ while (1):
                                         message = 'online message successful, {}!'.format(user['data'].decode()).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        break
 
                             # check if recipient is offline
                             for client_socket in offline_clients:
@@ -460,12 +467,14 @@ while (1):
                                         message = 'offline message successful, {}!'.format(user['data'].decode()).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        break
                                     else:
                                         #FIXME uncomment debugging print before submitting
                                         # print(f'off9 MESSAGE FAIL: can\'t send to {recipient}')
                                         message = 'Error, can\'t send offline message to: {}! *{} blocked you...'.format(recipient, recipient).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        break
                         # if user in credentials.txt but never log in
                         # if user not in credentials.txt
                         else:
@@ -544,6 +553,7 @@ while (1):
                         message = 'Error, {} doesn\'t exist!'.format(username).encode()
                         message_header = f"{len(message):<{20}}".encode()
                         notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        break
                 else:
                     #FIXME uncomment debugging print before submitting
                     # print('FAIL: Insufficient Args: {}!'.format(user['data'].decode().split(',')[0]))
@@ -567,27 +577,29 @@ while (1):
 
                     # checks my blocked user list
                     for client_socket in online_clients:
-                        if 'blocked-user' in user:
-                            # blocked-user is an array of dicts
-                            for i in range(len(user['blocked-user'])):
-                                if username == user['blocked-user'][i]['data'].decode():
-                                    # print('{} UNBLOCKED USER: {}!'.format(user['data'].decode().split(',')[0], username))
-                                    message = 'unblocked {}!'.format(username).encode()
-                                    message_header = f"{len(message):<{20}}".encode()
-                                    notified_socket.send(user['header'] + user['data'] + message_header + message)
-                                    del user['blocked-user'][i]
-                                    # successful
-                                    message = 'unblock successful, {}!'.format(user['data'].decode()).encode()
+                        if client_socket != notified_socket:
+                            if 'blocked-user' in user:
+                                if user_blocked_list(my_socket=notified_socket, to_check_socket=client_socket, on9clients=online_clients):
+                                    # blocked-user is an array of dicts
+                                    for i in range(len(user['blocked-user'])):
+                                        if username == user['blocked-user'][i]['data'].decode():
+                                            # print('{} UNBLOCKED USER: {}!'.format(user['data'].decode().split(',')[0], username))
+                                            message = 'unblocked {}!'.format(username).encode()
+                                            message_header = f"{len(message):<{20}}".encode()
+                                            notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                            del user['blocked-user'][i]
+                                            # successful
+                                            message = 'unblock successful, {}!'.format(user['data'].decode()).encode()
+                                            message_header = f"{len(message):<{20}}".encode()
+                                            notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                            break
+                                else:
+                                    #FIXME uncomment debugging print before submitting
+                                    # print('FAIL: to unblock: {}!'.format(username))
+                                    message = 'Error, fail to unblock {}!'.format(username).encode()
                                     message_header = f"{len(message):<{20}}".encode()
                                     notified_socket.send(user['header'] + user['data'] + message_header + message)
                                     break
-
-                            #FIXME uncomment debugging print before submitting
-                            # print('FAIL: to unblock: {}!'.format(username))
-                            message = 'Error, fail to unblock {}!'.format(username).encode()
-                            message_header = f"{len(message):<{20}}".encode()
-                            notified_socket.send(user['header'] + user['data'] + message_header + message)
-                            break
                 else:
                     #FIXME uncomment debugging print before submitting
                     # print('FAIL: Insufficient Args or Too Many Args: {}!'.format(user['data'].decode().split(',')[0]))
@@ -647,12 +659,88 @@ while (1):
             # --- logout end ---
 
             # --- P2P commands start---
-            # elif command == 'startprivate':
-            # P2P in that elif notified_socket in online_clients
-            # if len(clients) == 2:
-            #     print("Two clients have connected. Exchanging details for P2P")
-            #     clients[0].send(tupleToDelimString(clients[1].getpeername()).encode())
-            #     clients[1].send(tupleToDelimString(clients[0].getpeername()).encode())
+
+            # --- prompt client back to server ---
+            elif command == 'private-successful':
+                # successful
+                message = 'private successful, {}!'.format(user['data'].decode()).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                notified_socket.send(user['header'] + user['data'] + message_header + message)
+            # --- startprivate start ---
+            elif command == 'startprivate':
+                if length_encoded_msg(encoded_msg=message['data']) == 2:
+                    username = message['data'].decode().split(' ')[1]
+                    # if self fail
+                    if username == user['data'].decode():
+                        #FIXME uncomment debugging print before submitting
+                        # print('{} can\'t UNBLOCK SELF!'.format(username))
+                        message = 'Error, can\'t startprivate self: {}!'.format(username).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        break
+                    # check if user exist    
+                    if user_exists(username=username, on9clients=online_clients, off9clients=offline_clients):
+                        # check if user is online and not offline
+                        if user_exists_On9clients(username=username, on9clients=online_clients) and not user_exists_Off9clients(username=username, off9clients=offline_clients):
+                            for client_socket in online_clients:
+                                if client_socket != notified_socket:
+                                    if online_clients[client_socket]['data'].decode() == username:
+                                        if 'blocked-user' in user:
+                                            if user_blocked_list(my_socket=notified_socket, to_check_socket=client_socket, on9clients=online_clients): 
+                                                #FIXME uncomment debugging print before submitting
+                                                # print('FAIL: can\'t startprivate with {}!'.format(username))
+                                                message = f'Error, can\'t startprivate with {username}, either {username} is blocked or {username} blocked you!'.encode()
+                                                message_header = f"{len(message):<{20}}".encode()
+                                                notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                                break
+                                        if 'blocked-user' in online_clients[client_socket]:
+                                            if user_blocked_list(my_socket=client_socket, to_check_socket=notified_socket, on9clients=online_clients):
+                                                #FIXME uncomment debugging print before submitting
+                                                # print('FAIL: can\'t startprivate with {}!'.format(username))
+                                                message = f'Error, can\'t startprivate with {username}, either {username} is blocked or {username} blocked you!'.encode()
+                                                message_header = f"{len(message):<{20}}".encode()
+                                                notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                                break
+                                        # message = 'startprivate'.encode()
+                                        message = 'startprivate {} {}'.format(online_clients[client_socket]['private-connection'][0], online_clients[client_socket]['private-connection'][1]).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        # message = 'startprivate {} {}'.format(user['private-connection'][0], user['private-connection'][1]).encode()
+                                        message = 'startprivate'.encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        client_socket.send(user['header'] + user['data'] + message_header + message)
+                                        time.sleep(10)
+                                        # successful
+                                        # message = 'startprivate successful, {}!'.format(user['data'].decode()).encode()
+                                        # message_header = f"{len(message):<{20}}".encode()
+                                        # notified_socket.send(user['header'] + user['data'] + message_header + message)
+                                        # message = 'startprivate successful, {}!'.format(online_clients[client_socket]['data'].decode()).encode()
+                                        # message_header = f"{len(message):<{20}}".encode()
+                                        # client_socket.send(user['header'] + user['data'] + message_header + message)
+                                        break
+                        else:
+                            #FIXME uncomment debugging print before submitting
+                            # print('FAIL: {} not online!'.format(username))
+                            message = 'Error, {} not online!'.format(username).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            notified_socket.send(user['header'] + user['data'] + message_header + message)
+                            break
+                    # if user in credentials.txt but never log in
+                    # if user not in credentials.txt
+                    else:
+                        #FIXME uncomment debugging print before submitting
+                        # print('FAIL: {} doesn\'t exist!'.format(username))
+                        message = 'Error, {} doesn\'t exist!'.format(username).encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        notified_socket.send(user['header'] + user['data'] + message_header + message)
+                        break
+                else:
+                    #FIXME uncomment debugging print before submitting
+                    # print('FAIL: Insufficient Args or Too Many Args: {}!'.format(user['data'].decode().split(',')[0]))
+                    message = 'Error, Insufficient Args or Too Many Args: {}!'.format(user['data'].decode()).encode()
+                    message_header = f"{len(message):<{20}}".encode()
+                    notified_socket.send(user['header'] + user['data'] + message_header + message)                          
+            # --- startprivate end ---
             
             # --- default ---
             else:
