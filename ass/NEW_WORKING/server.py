@@ -178,11 +178,24 @@ while (1):
                                 del offline_messages[offline_socket]
                             del offline_clients[offline_socket]
                             break
-                    
+
+                    for online_socket in online_clients:
+                        if client_socket != online_socket:
+                            if 'blocked-user' in user:
+                                # check if user in my block list
+                                if user_blocked_list(my_socket=client_socket, to_check_socket=online_socket, on9clients=online_clients):
+                                    continue
+                            if 'blocked-user' in online_clients[online_socket]:
+                                # check if me in user block list
+                                if user_blocked_list(my_socket=online_socket, to_check_socket=client_socket, on9clients=online_clients):
+                                     continue
+                            message = '{} Logged in at {}'.format(user['data'].decode(), user['logged-in'].strftime("%d/%m/%Y, %H:%M:%S.%f")[:-3]).encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            online_socket.send(user['header'] + user['data'] + message_header + message)
+
                     message = 'offline messages successful, {}'.format(user['data'].decode()).encode()
                     message_header = f"{len(message):<{20}}".encode()
                     client_socket.send(message_header + message)
-
                     break
                 elif 'Password' in result:
                     retry_count += 1
@@ -288,6 +301,7 @@ while (1):
 
             # --- broadcast start ---
             elif command == 'broadcast':
+            # if command == 'broadcast':
                 if length_encoded_msg(encoded_msg=message['data']) >= 2:
                     # remove command from message
                     message['data'] = message['data'].decode().split(' ',1)[1].encode()
@@ -702,14 +716,14 @@ while (1):
                                                 notified_socket.send(user['header'] + user['data'] + message_header + message)
                                                 break
                                         # message = 'startprivate'.encode()
-                                        message = 'startprivate {} {}'.format(online_clients[client_socket]['private-connection'][0], online_clients[client_socket]['private-connection'][1]).encode()
+                                        message = 'startprivate {} {} {}'.format(online_clients[client_socket]['private-connection'][0], online_clients[client_socket]['private-connection'][1], online_clients[client_socket]['data'].decode()).encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         notified_socket.send(user['header'] + user['data'] + message_header + message)
-                                        # message = 'startprivate {} {}'.format(user['private-connection'][0], user['private-connection'][1]).encode()
-                                        message = 'startprivate'.encode()
+                                        message = 'startprivate {} {} {}'.format(user['private-connection'][0], user['private-connection'][1], user['data'].decode()).encode()
+                                        # message = 'startprivate'.encode()
                                         message_header = f"{len(message):<{20}}".encode()
                                         client_socket.send(user['header'] + user['data'] + message_header + message)
-                                        time.sleep(10)
+                                        # time.sleep(10)
                                         # successful
                                         # message = 'startprivate successful, {}!'.format(user['data'].decode()).encode()
                                         # message_header = f"{len(message):<{20}}".encode()
@@ -742,6 +756,16 @@ while (1):
                     notified_socket.send(user['header'] + user['data'] + message_header + message)                          
             # --- startprivate end ---
             
+            # --- private message start ---
+            elif command == 'private-notification':
+                recipient = message['data'].decode().split(' ')[1]
+                for client_socket in online_clients:
+                    if online_clients[client_socket]['data'].decode() == recipient:
+                        message = 'startprivate'.encode()
+                        message_header = f"{len(message):<{20}}".encode()
+                        client_socket.send(user['header'] + user['data'] + message_header + message)
+            # --- private message end ---
+
             # --- default ---
             else:
                 #FIXME uncomment debugging print before submitting

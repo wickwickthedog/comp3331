@@ -81,45 +81,33 @@ while (1):
             print(f'p2p_client: {p2p_client.getsockname()}')
             socket_list.append(p2p_client)
             p2p_user = {}
-            p2p_user['data'] = username
-            p2p_user['header'] = f"{len(username):<{20}}".encode()
+            p2p_user['username'] = username
             p2p_user['address'] = p2p_address
-
+            # print('p2p_user: {}'.format(p2p_user['username']))
             online_p2p_clients[p2p_client] = p2p_user
-
-            message = 'with ~ {}'.format(username.decode()).encode()
+            # print('online_p2p_clients[p2p_client]: {}'.format(online_p2p_clients[p2p_client]['username']))
+            message = 'with ~ {} @ {}'.format(p2p_user['username'].decode(), p2p_user['address']).encode()
             message_header = f"{len(message):<{20}}".encode()
             p2p_client.send(message_header + message)
-            print('P2P ~ Accepted new connection from {}'.format(p2p_user['address']))
+            
+            print('P2P ~ Accepted new connection from {}'.format(p2p_address))
 
-            message = 'private-successful ~ {}'.format(username.decode()).encode()
-            message_header = f"{len(message):<{20}}".encode()
-            client_socket.send(message_header + message)
+            # message = 'private-successful ~ {}'.format(username.decode()).encode()
+            # message_header = f"{len(message):<{20}}".encode()
+            # client_socket.send(message_header + message)
         elif notified_socket in online_p2p_clients:
-        # else:
+            # time.sleep(.5)
             message = receive_message(client_socket=notified_socket)
 
             if not message:
-                print('p2p_client: {} was closed.'.format(online_p2p_clients[notified_socket]['data'].decode()))
+                print('p2p_client: {} was closed.'.format(online_p2p_clients[notified_socket]['username'].decode()))
                 socket_list.remove(notified_socket)
                 del online_p2p_clients[notified_socket]
             else:
-                print('P2P {} > {}'.format(online_p2p_clients[notified_socket]['data'].decode(), message['data'].decode()))
+                print('P2P {} > {}'.format(online_p2p_clients[notified_socket]['username'].decode(), message['data'].decode()))
                 message = 'private-successful ~ {}'.format(username.decode()).encode()
                 message_header = f"{len(message):<{20}}".encode()
                 client_socket.send(message_header + message)
-            
-        elif notified_socket is not client_socket:
-            message = receive_message(client_socket=notified_socket)
-
-            if not message:
-                continue
-            else:
-                print('P2P {}'.format(message['data'].decode()))
-                message = 'private-successful ~ {}'.format(username.decode()).encode()
-                message_header = f"{len(message):<{20}}".encode()
-                client_socket.send(message_header + message)
-                
         # server
         elif notified_socket is client_socket:
                 # --- authentication start ---
@@ -132,6 +120,7 @@ while (1):
                     result = message['data'].decode()
                     if 'offline messages successful, ' in result:
                         Logged_in = True
+                        continue
                     else:
                         print(result)
                     if 'Welcome' in result:
@@ -164,24 +153,50 @@ while (1):
 
                 # --- Receive message from server start ---
                 is_private = False
+                # sent = False
                 # Now we want to loop over received messages (there might be more than one) and print them
                 while (1):
                     if is_private:
                         break
-                    
+                    # time.sleep(.30)
                     command = input(f'{username.decode()} > ').strip()
-                    time.sleep(.5)
-                    if command is '':
-                        message = command.encode()
-                        message_header = f"{len(message):<{20}}".encode()
-                    else:
-                        message = command.encode()
-                        message_header = f"{len(message):<{20}}".encode()
-                        notified_socket.send(message_header + message)
+                    time.sleep(.15)
+                    if command is not'':
+                    #     message = command.encode()
+                    #     message_header = f"{len(message):<{20}}".encode()
+                    # else:
+                        check = command.split(' ')
+                        if check[0] == 'private':
+                            if len(check) < 3:
+                                print(f'Error, Insufficient Args! {check[1]}')
+                            else:
+                                sent = False
+                                for client_socket in online_p2p_clients:
+                                    # print('{} & {}'.format(online_p2p_clients[client_socket]['username'].decode(), check[1]))
+                                    if online_p2p_clients[client_socket]['username'].decode() == check[1]:
+                                    # if client_socket == notified_socket:
+                                        # send message
+                                        message = command.split(' ',2)[2].encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        client_socket.send(message_header + message)
+                                        # print('sent')
+                                        message = 'private-notification {}'.format(check[1]).encode()
+                                        message_header = f"{len(message):<{20}}".encode()
+                                        notified_socket.send(message_header + message)
+                                        sent = True
+                                        break
+                                # startprivate not init
+                                if not sent:
+                                    print(f'Error, Private messaging to {check[1]} not enabled yet!')
+                        else:
+                            message = command.encode()
+                            message_header = f"{len(message):<{20}}".encode()
+                            notified_socket.send(message_header + message)
+                            time.sleep(.15)
                     try:
                         while (1):
                             # need this else need to press enter to get the message
-                            time.sleep(1)
+                            time.sleep(.85)
                             # receive "header" containing user length, it's size is defined and constant
                             user_header = notified_socket.recv(20)
 
@@ -211,7 +226,7 @@ while (1):
                                 sys.exit(1)
                             elif f'No command specified, {user}!' in message or f'successful, {user}!' in message:
                                 break
-                            elif f'{user} Logged out at ' in message or 'Error,' in message:
+                            elif f'Logged in at ' in message or f'{user} Logged out at ' in message or 'Error,' in message:
                                 print(message)
                                 break
                             elif 'whoelse ' in message:
@@ -228,13 +243,15 @@ while (1):
                                 new_socket.connect((commands[1], int(commands[2])))
                                 new_socket.setblocking(False)
                                 print(f'new_socket: {new_socket.getsockname()}')
-                                # user_header = f"{len(username):<{20}}".encode()
-                                # new_socket.send(user_header + username)
-                                # user = 'Welcome P2P ~ {}'.format(username.decode()).encode()
-                                # user_header = f"{len(message):<{20}}".encode()
-                                # new_socket.send(user_header + user)
+
+                                recipient = {}
+                                recipient['username'] = commands[3].encode()
+
+                                online_p2p_clients[new_socket] = recipient
+                                # print('recipient {}'.format(online_p2p_clients[new_socket]['username']))
                                 socket_list.append(new_socket)
                                 is_private = True
+                                # print(online_p2p_clients)
                                 break
                             else:
                                 print(f'{user} > {message}')
@@ -255,12 +272,16 @@ while (1):
                         print('Reading error: Message FAIL: message(s) from server'.format(str(e)))
                         sys.exit(1)
                 # --- Receive message from server end ---
-            # FIXME p2p Naively assume the message is an address tuple
-            # host, port = message.decode().split("|")
-            # port = int(port)
-            # print("RELAY | Got peer address:", (host,port))
-            # print(f"| Going to connect to {host}:{port}!")
-            # newClient = socket(AF_INET, SOCK_STREAM)
-            # newClient.connect((host,port))
-            # newClient.send(b"Hey ;)")
+        # elif notified_socket is not client_socket:
+        else:
+            message = receive_message(client_socket=notified_socket)
+
+            if not message:
+                print('Connection {} was closed.'.format(notified_socket.getsockname()))
+                socket_list.remove(notified_socket)
+            else:
+                print('P2P {}'.format(message['data'].decode()))
+                message = 'private-successful ~ {}'.format(username.decode()).encode()
+                message_header = f"{len(message):<{20}}".encode()
+                client_socket.send(message_header + message)
     time.sleep(1)
