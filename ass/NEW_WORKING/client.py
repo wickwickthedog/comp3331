@@ -299,9 +299,10 @@ while (1):
             else:
                 msg = message['data'].decode()
                 p2p_user = {}
-                p2p_user['client-owner'] = msg.split(' ')[4]
-                # p2p clients that are online in my p2p server
-                online_p2p_servers[p2p_client] = p2p_user
+                if len(msg) > 5:
+                    p2p_user['client-owner'] = msg.split(' ')[4]
+                    # p2p clients that are online in my p2p server
+                    online_p2p_servers[p2p_client] = p2p_user
                 print(msg)
                 is_private = False
                 #FIXME uncomment debugging print before submitting
