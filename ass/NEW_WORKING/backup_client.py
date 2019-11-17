@@ -15,12 +15,12 @@ import sys
 import time
 import datetime
 
-# server_name = 'localhost'
-# server_port = 12000
+server_name = 'localhost'
+server_port = 12000
 
 # FIXME before submitting
-server_name = sys.argv[1]
-server_port = int(sys.argv[2])
+# server_name = sys.argv[1]
+# server_port = int(sys.argv[2])
 
 # Create a socket
 # socket.AF_INET - address family, IPv4, some otehr possible are AF_INET6, AF_BLUETOOTH, AF_UNIX
