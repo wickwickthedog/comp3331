@@ -14,16 +14,16 @@ import sys
 import time
 import datetime
 
-# server_host = 'localhost'
-# server_port = 12000
-# block_duration = 60
-# timeout = 120
+server_host = 'localhost'
+server_port = 12000
+block_duration = 60
+timeout = 120
 
 # FIXME before submitting
-server_host = 'localhost'
-server_port = int(sys.argv[1])
-block_duration = int(sys.argv[2])
-timeout = int(sys.argv[3])
+# server_host = 'localhost'
+# server_port = int(sys.argv[1])
+# block_duration = int(sys.argv[2])
+# timeout = int(sys.argv[3])
 
 # Create a socket
 # socket.AF_INET - address family, server_hostv4, some otehr possible are AF_INET6, AF_BLUETOOTH, AF_UNIX
