@@ -17,7 +17,7 @@ import datetime
 # server_host = 'localhost'
 # server_port = 12000
 # block_duration = 60
-# timeout = 120
+# timeout = 40
 
 # FIXME before submitting
 server_host = 'localhost'
@@ -183,6 +183,12 @@ while (1):
 
                     # user will have keys: header, data, logged-in, last-active
                     online_clients[client_socket] = user
+
+                    # update offline list
+                    for offline_socket in offline_clients:
+                        if offline_clients[offline_socket]['data'] == user['data']:
+                            del offline_clients[offline_socket]
+                            break
 
                     print('Accepted new connection from {}:{} ~> {}'.format(*client_address, user['data'].decode()))
 

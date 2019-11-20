@@ -54,12 +54,6 @@ p2p_socket.listen()
 # List of client_ socket and p2p_socket sockets for select()
 socket_list = [client_socket, p2p_socket]
 
-print(f'Connecting to server at {server_name} : {server_port}')
-print(f'client_socket to receive from server: {client_socket.getsockname()[0]} : {client_socket.getsockname()[1]}')
-print(f'p2p_socket: {p2p_socket.getsockname()[0]} : {p2p_socket.getsockname()[1]}\n')
-
-Logged_in = False
-
 # List of p2p client sockets created
 # contains client-owner, server-owner
 online_p2p_clients = {}
@@ -67,6 +61,10 @@ online_p2p_clients = {}
 # List of p2p clients connected to my p2p server
 # contains client-owner
 online_p2p_servers = {}
+
+print(f'Connecting to server at {server_name} : {server_port}')
+print(f'client_socket to receive from server: {client_socket.getsockname()[0]} : {client_socket.getsockname()[1]}')
+print(f'p2p_socket: {p2p_socket.getsockname()[0]} : {p2p_socket.getsockname()[1]}\n')
 
 # --- Authentication START ---
 username = input("Username: ").strip() # .replace(" ", "")
@@ -79,7 +77,9 @@ user_header = f"{len(credentials):<{20}}".encode()
 client_socket.send(user_header + credentials)
 
 command = ''
+Logged_in = False
 is_private = False
+
 while (1):
     if not is_private: # too make the p2p connection smooth without input interruption
         if Logged_in:
@@ -127,6 +127,11 @@ while (1):
                         if not closed:
                             print(f'Error, Private messaging to {commands[1]} not enabled yet!')
                 else:
+                    # if timeout received from server
+                    if client_socket not in socket_list:
+                        print('Error, Invalid command')
+                        continue
+                    # else send to server
                     try:
                         message = command.encode()
                         message_header = f"{len(message):<{20}}".encode()
@@ -279,7 +284,7 @@ while (1):
                     online_p2p_clients[new_socket] = p2p_user
                     is_private = True
 
-                    message = f'p2p {commands[3]} : setup to {commands[4]} successful!'.encode()
+                    message = f'p2p {commands[4]} : setup to {commands[3]} successful!'.encode()
                     message_header = f"{len(message):<{20}}".encode()
                     new_socket.send(message_header + message)
                 else:
@@ -288,7 +293,7 @@ while (1):
         # --- Receive message from server end ---
 
         # --- Receive message from p2p to setup --- 
-        else:
+        elif notified_socket not in online_p2p_servers:
             message = receive_message(client_socket=notified_socket)
 
             if not message:
@@ -299,8 +304,15 @@ while (1):
             else:
                 msg = message['data'].decode()
                 p2p_user = {}
-                if len(msg) > 5:
-                    p2p_user['client-owner'] = msg.split(' ')[4]
+                # timeout during p2p
+                if msg == 'WICKWICK\'S SERVER':
+                    continue
+                elif 'timeout for:' in msg:
+                    print(msg)
+                    continue
+                # setup p2p connection
+                elif ': setup to' in msg:
+                    p2p_user['client-owner'] = msg.split(' ')[5]
                     # p2p clients that are online in my p2p server
                     online_p2p_servers[p2p_client] = p2p_user
                 print(msg)
