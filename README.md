@@ -33,7 +33,12 @@ E2:4 incorrect , no fragmentation of fragments(-0.5),
 E3:2 incomplete, packets are waiting (-0.25)
 ```
 
-### Lab07 - ?/10
+### Lab07 - 8/10
+```
+E1: E1:Q7 port difference are incorrect (0.125), Q11 port numbers won't change (0.125) E1:Q13 incorrect explanations (-0.5)
+E2:Q2 incorrect MAC address (-0.5)
+E3:Q1 incomplete answer, failed to identify ARP request (-0.25), E3:Q9 incorrect, it's in Sender MAC address field(-0.5)
+```
 
 -------
-## Assigment - ?/20
+## Assigment (P2P chat) - ?/20
