@@ -41,4 +41,7 @@ E3:Q1 incomplete answer, failed to identify ARP request (-0.25), E3:Q9 incorrect
 ```
 
 -------
-## Assigment (P2P chat) - ?/20
+## Assigment (P2P chat) - 19/20
+```
+fml bug in offline message (-1)
+```
