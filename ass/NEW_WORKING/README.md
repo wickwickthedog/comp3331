@@ -1,6 +1,11 @@
 # COMP3331 Assignment - Harvey
 This is my solution, check out the report for more details
 
+## Assigment (P2P chat) - 19/20
+```
+fml bug in offline message (-1)
+```
+
 # Quick Guide
 TCP server takes 3 args port, block duration and timeout
 ```
